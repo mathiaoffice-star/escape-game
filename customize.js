@@ -7,7 +7,7 @@ async function getMedia(key){const db=await openDB();return new Promise((resolve
 async function putMedia(key,blob){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(blob,key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}
 async function removeMedia(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});}
 function status(s){const el=$('shopStatus');if(el)el.textContent=s;}
-function charge(cost,label,done){if(wallet<cost){status('金の玉が足りません。'+label+'には'+cost+'金の玉が必要です。');return false;}wallet-=cost;saveWallet();updateShopUI();status(label+'を設定しました！');done();return true;}
+function charge(cost,label,done){if(window.chargeGameCoins){window.chargeGameCoins(cost,label,done);return true;}if(wallet<cost){status('金の玉が足りません。'+label+'には'+cost+'金の玉が必要です。');return false;}wallet-=cost;saveWallet();updateShopUI();status(label+'を設定しました！');done();return true;}
 const shopGrid=document.querySelector('#shopScreen .shop-grid');
 if(!shopGrid||!$('playerImg')&&typeof playerImg==='undefined')return;
 const panel=document.createElement('section');panel.className='shop-item custom-media-panel';panel.style.gridColumn='1/-1';
