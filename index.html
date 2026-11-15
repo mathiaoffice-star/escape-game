@@ -3,47 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Escape Game</title>
+<title>お祈りメールはいらない！</title>
 <style>
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101827;color:#fff;font-family:system-ui,sans-serif}
-  #status{padding:24px;text-align:center}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101827;color:#fff;font-family:system-ui,sans-serif}#status{padding:24px;text-align:center}
 </style>
 </head>
 <body>
 <div id="status">ゲームを読み込んでいます…</div>
 <script>
 (async()=>{
-  try{
-    const response=await fetch('./index.html%20.html',{cache:'no-store'});
-    if(!response.ok) throw new Error('ゲーム本体を読み込めませんでした ('+response.status+')');
-    let html=await response.text();
-    const replacements=[
-      [
-        "coinDrops.push({x:e.x,y:e.y,vx:(Math.random()-.5)*2.4,vy:-1.5-Math.random()*1.5,life:9000,value:10,kind:'enemy'});",
-        "coinDrops.push({x:e.x,y:e.y,vx:0,vy:0,life:6000,value:10,kind:'enemy'});"
-      ],
-      [
-        "if(c.kind!=='ambient'){",
-        "if(c.kind!=='ambient'&&c.kind!=='enemy'){"
-      ],
-      [
-        "if(magnetRadius>0&&d<magnetRadius){",
-        "if(c.kind!=='enemy'&&magnetRadius>0&&d<magnetRadius){"
-      ]
-    ];
-    for(const [before,after] of replacements){
-      const first=html.indexOf(before);
-      if(first<0 || html.indexOf(before,first+before.length)>=0){
-        throw new Error('ゲームのコード構成が想定と異なるため、安全のため更新を中止しました。');
-      }
-      html=html.slice(0,first)+after+html.slice(first+before.length);
-    }
-    document.open();
-    document.write(html);
-    document.close();
-  }catch(error){
-    document.getElementById('status').textContent='読み込みエラー：'+error.message;
-  }
+try{
+const response=await fetch('./index.html%20.html',{cache:'no-store'});if(!response.ok)throw new Error('ゲーム本体を読み込めませんでした ('+response.status+')');let html=await response.text();
+const replacements=[
+["coinDrops.push({x:e.x,y:e.y,vx:(Math.random()-.5)*2.4,vy:-1.5-Math.random()*1.5,life:9000,value:10,kind:'enemy'});","coinDrops.push({x:e.x,y:e.y,vx:0,vy:0,life:6000,value:10,kind:'enemy'});"],
+["if(c.kind!=='ambient'){","if(c.kind!=='ambient'&&c.kind!=='enemy'){"] ,
+["if(magnetRadius>0&&d<magnetRadius){","if(c.kind!=='enemy'&&magnetRadius>0&&d<magnetRadius){"] ,
+["<title>Escape Game</title>","<title>お祈りメールはいらない！</title>"],
+["ESCAPE GAME","お祈りメールはいらない！"],
+["🪙","<span class='coin-mark' aria-label='コイン'></span>"],
+['<div class="pad" aria-label="移動ボタン"><button class="up" data-dir="up">▲</button><button class="left" data-dir="left">◀</button><button class="down" data-dir="down">▼</button><button class="right" data-dir="right">▶</button></div>','<div class="joystick-wrap" aria-label="バーチャルスティック"><div id="joystick" class="joystick"><div id="joystickThumb" class="joystick-thumb"></div></div><span>移動</span></div>'],
+["document.querySelectorAll('[data-dir]').forEach(btn=>{\n  const dir=btn.dataset.dir;\n  const on=e=>{e.preventDefault();startBGM();keys[dir]=true;};\n  const off=e=>{e.preventDefault();keys[dir]=false;};\n  btn.addEventListener('pointerdown',on);\n  btn.addEventListener('pointerup',off);\n  btn.addEventListener('pointerleave',off);\n  btn.addEventListener('pointercancel',off);\n});",
+"const joystick=document.getElementById('joystick');\nconst joystickThumb=document.getElementById('joystickThumb');\nlet joystickPointer=null;\nfunction moveJoystick(e){const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=(e.clientX-cx)/(r.width*0.34),dy=(e.clientY-cy)/(r.height*0.34);const len=Math.hypot(dx,dy);if(len>1){dx/=len;dy/=len;}joystickThumb.style.transform='translate('+(dx*34)+'px,'+(dy*34)+'px)';keys.left=dx<-.25;keys.right=dx>.25;keys.up=dy<-.25;keys.down=dy>.25;}\nfunction releaseJoystick(e){if(joystickPointer!==e.pointerId)return;joystickPointer=null;keys.left=keys.right=keys.up=keys.down=false;joystickThumb.style.transform='translate(0,0)';}\njoystick.addEventListener('pointerdown',e=>{e.preventDefault();startBGM();joystickPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);moveJoystick(e);});joystick.addEventListener('pointermove',e=>{if(joystickPointer===e.pointerId){e.preventDefault();moveJoystick(e);}});joystick.addEventListener('pointerup',releaseJoystick);joystick.addEventListener('pointercancel',releaseJoystick);"]
+];
+for(const [before,after] of replacements){const first=html.indexOf(before);if(first<0||(before!=='ESCAPE GAME'&&before!=='🪙'&&html.indexOf(before,first+before.length)>=0))throw new Error('対象コードが見つからないか重複しています：'+before.slice(0,35));html=html.split(before).join(after);}
+const extraStyles = ".coin-mark{display:inline-block;width:25px;height:25px;vertical-align:-4px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff4a8 0 12%,#facc15 30%,#d97706 78%);border:2px solid #a16207;box-shadow:inset 0 0 0 2px #fde68a,0 1px 2px #0002}\n.joystick-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;margin:4px 8px}.joystick-wrap>span{font-size:12px;color:#64748b;font-weight:700}.joystick{width:124px;height:124px;border-radius:50%;background:radial-gradient(circle,#e2e8f0 0 48%,#cbd5e1 50% 68%,#94a3b8 70% 100%);border:2px solid #64748b;box-shadow:inset 0 3px 8px #0002,0 3px 8px #0002;display:grid;place-items:center;touch-action:none;user-select:none}.joystick-thumb{width:52px;height:52px;border-radius:50%;background:linear-gradient(145deg,#fff,#94a3b8);border:2px solid #64748b;box-shadow:0 3px 7px #0003;pointer-events:none}\n@media(max-width:600px){.controls{grid-template-columns:1fr 1fr;align-items:center}.joystick-wrap{grid-column:1;grid-row:2/5;margin:0 auto}.controls #attackBtn{grid-column:2;grid-row:2;min-height:58px}.controls #restartBtn{grid-column:2;grid-row:3}.controls #gameBackToMenu{grid-column:2;grid-row:4}.menu-heading h1{font-size:clamp(23px,6vw,34px)}}";
+html=html.replace('</style>',extraStyles+'</style>');
+html=html.replace('スマホ：画面下の矢印ボタンで移動・「攻撃！」で攻撃','スマホ：左のスティックで移動・右の「攻撃！」で攻撃');
+document.open();document.write(html);document.close();
+}catch(error){document.getElementById('status').textContent='読み込みエラー：'+error.message;}
 })();
 </script>
 </body>
