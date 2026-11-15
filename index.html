@@ -72,27 +72,6 @@ html=html.replace('スマホ：画面下の矢印ボタンで移動・「攻撃�
 html=html.replace(/コイン/g,'金の玉');
 html=html.replace(/\.coin-mark\\{[^}]*\\}/, ".coin-mark{display:inline-block;width:27px;height:27px;vertical-align:-5px;border-radius:50%;background:radial-gradient(circle at 32% 27%,#fffde7 0 5%,#fff1a8 12%,#facc15 34%,#e6a700 62%,#a85d00 100%);box-shadow:inset -3px -4px 6px #8a4b0055,inset 2px 2px 5px #fff9,0 2px 3px #0003;border:1px solid #b77905}");
 
-html=html.replace('</body>',`
-<script>
-(function(){
- const contact=document.createElement('div');
- contact.id='escape-game-contact';
- contact.innerHTML='<span style="opacity:.85">お問い合わせ：</span><a href="mailto:mathia.office@gmail.com" style="color:#fff;text-decoration:underline;text-underline-offset:2px;">mathia.office@gmail.com</a>';
- Object.assign(contact.style,{display:'none',position:'fixed',left:'50%',bottom:'14px',transform:'translateX(-50%)',zIndex:'99999',padding:'7px 12px',borderRadius:'999px',background:'rgba(15,23,42,.88)',border:'1px solid rgba(255,255,255,.28)',color:'#fff',font:'12px/1.4 system-ui,sans-serif',whiteSpace:'nowrap',boxShadow:'0 2px 8px rgba(0,0,0,.25)'});
- document.body.appendChild(contact);
- function update(){
-  const title=[...document.querySelectorAll('h1,h2,[role="heading"]')].find(el=>el.textContent.includes('お祈りメールはいらない！'));
-  let visible=false;
-  if(title){const rect=title.getBoundingClientRect(),style=getComputedStyle(title);visible=rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden';}
-  contact.style.display=visible?'block':'none';
- }
- new MutationObserver(update).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class','hidden']});
- window.addEventListener('resize',update);
- update();
- setTimeout(update,500);setTimeout(update,1500);
-})();
-</script>
-</body>`);
 document.open();document.write(html);document.close();
 }catch(error){document.getElementById('status').textContent='読み込みエラー：'+error.message;}
 })();
