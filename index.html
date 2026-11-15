@@ -31,9 +31,10 @@ const onlineRanking = String.raw`// オンラインランキング（Supabase）
 const DEVICE_NICK_KEY='escapeGameNicknameV1';
 const RANK_KEY='escapeGameRanksV1';
 let selectedRank='normal';
-const sbClient=window.supabase.createClient('https://caittxvisaqpcrurqgag.supabase.co','sb_publishable_VBhQe8t5WtKR39XluwRZJg_sKrbieI7');
+const sbClient=window.supabase?.createClient?window.supabase.createClient('https://caittxvisaqpcrurqgag.supabase.co','sb_publishable_VBhQe8t5WtKR39XluwRZJg_sKrbieI7'):null;
 let onlineUser=null, onlineReady=null;
 async function ensureOnlineUser(){
+ if(!sbClient)throw new Error('オンラインランキングの接続ライブラリを読み込めませんでした');
  if(onlineUser)return onlineUser;if(onlineReady)return onlineReady;
  onlineReady=(async()=>{const {data:sd}=await sbClient.auth.getSession();let user=sd.session?.user||null;if(!user){const {data,error}=await sbClient.auth.signInAnonymously();if(error)throw error;user=data.user;}onlineUser=user;
  const {data:profile,error:pe}=await sbClient.from('player_profiles').select('username').eq('id',user.id).maybeSingle();if(pe)throw pe;
