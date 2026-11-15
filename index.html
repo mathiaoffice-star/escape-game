@@ -3,9 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0;url=./index.html%20.html">
-<title>Loading…</title>
-<script>location.replace("./index.html%20.html");</script>
+<title>Escape Game</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#101827;color:#fff;font-family:system-ui,sans-serif}
+  #status{padding:24px;text-align:center}
+</style>
 </head>
-<body><p><a href="./index.html%20.html">ゲームを開く</a></p></body>
+<body>
+<div id="status">ゲームを読み込んでいます…</div>
+<script>
+(async()=>{
+  try{
+    const response=await fetch('./index.html%20.html',{cache:'no-store'});
+    if(!response.ok) throw new Error('ゲーム本体を読み込めませんでした ('+response.status+')');
+    let html=await response.text();
+    const replacements=[
+      [
+        "coinDrops.push({x:e.x,y:e.y,vx:(Math.random()-.5)*2.4,vy:-1.5-Math.random()*1.5,life:9000,value:10,kind:'enemy'});",
+        "coinDrops.push({x:e.x,y:e.y,vx:0,vy:0,life:6000,value:10,kind:'enemy'});"
+      ],
+      [
+        "if(c.kind!=='ambient'){",
+        "if(c.kind!=='ambient'&&c.kind!=='enemy'){"
+      ],
+      [
+        "if(magnetRadius>0&&d<magnetRadius){",
+        "if(c.kind!=='enemy'&&magnetRadius>0&&d<magnetRadius){"
+      ]
+    ];
+    for(const [before,after] of replacements){
+      const first=html.indexOf(before);
+      if(first<0 || html.indexOf(before,first+before.length)>=0){
+        throw new Error('ゲームのコード構成が想定と異なるため、安全のため更新を中止しました。');
+      }
+      html=html.slice(0,first)+after+html.slice(first+before.length);
+    }
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(error){
+    document.getElementById('status').textContent='読み込みエラー：'+error.message;
+  }
+})();
+</script>
+</body>
 </html>
