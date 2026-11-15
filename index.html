@@ -72,7 +72,7 @@ html=html.replace('スマホ：画面下の矢印ボタンで移動・「攻撃�
 html=html.replace(/コイン/g,'金の玉');
 html=html.replace(/\.coin-mark\\{[^}]*\\}/, ".coin-mark{display:inline-block;width:27px;height:27px;vertical-align:-5px;border-radius:50%;background:radial-gradient(circle at 32% 27%,#fffde7 0 5%,#fff1a8 12%,#facc15 34%,#e6a700 62%,#a85d00 100%);box-shadow:inset -3px -4px 6px #8a4b0055,inset 2px 2px 5px #fff9,0 2px 3px #0003;border:1px solid #b77905}");
 
-html=html.replace('</body>','<script src="./customize.js"><\/script><script src="./stripe-store.js"><\/script></body>');
+html=html.replace('</body>','<script src="./customize.js?v=media3"><\/script><script src="./stripe-store.js?v=media3"><\/script></body>');
 document.open();document.write(html);document.close();
 }catch(error){document.getElementById('status').textContent='読み込みエラー：'+error.message;}
 })();
