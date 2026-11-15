@@ -13,7 +13,7 @@ body{margin:0;min-height:100vh;display:grid;place-items:center;background:#10182
 <script>
 (async()=>{
 try{
-const response=await fetch('./index.html%20.html',{cache:'no-store'});if(!response.ok)throw new Error('ゲーム本体を読み込めませんでした ('+response.status+')');let html=await response.text();
+const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),120000);document.getElementById('status').textContent='ゲームデータを読み込んでいます…（初回は少し時間がかかります）';let response;try{response=await fetch('./index.html%20.html',{signal:controller.signal});}finally{clearTimeout(timeout);}if(!response.ok)throw new Error('ゲーム本体を読み込めませんでした ('+response.status+')');document.getElementById('status').textContent='ゲームを準備しています…';let html=await response.text();
 const replacements=[
 ["coinDrops.push({x:e.x,y:e.y,vx:(Math.random()-.5)*2.4,vy:-1.5-Math.random()*1.5,life:9000,value:10,kind:'enemy'});","coinDrops.push({x:e.x,y:e.y,vx:0,vy:0,life:6000,value:10,kind:'enemy'});"],
 ["if(c.kind!=='ambient'){","if(c.kind!=='ambient'&&c.kind!=='enemy'){"] ,
