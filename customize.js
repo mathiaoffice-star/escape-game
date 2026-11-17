@@ -94,38 +94,6 @@ muteBtn.addEventListener('click',()=>{window.__escapeMasterMute=!window.__escape
 const originalStartBGM=startBGM;startBGM=function(){if(window.__escapeMasterMute||window.__customVoiceRecording)return;originalStartBGM();};
 const originalPlay=play;play=function(a){if(window.__escapeMasterMute)return;originalPlay(a);};
 // 音声再生は1か所で制御。購入済み音声がある場合は標準音声を鳴らさず、カスタム音声だけを再生する。
-let customAttackAudio=null,customDefeatAudio=null;
-async function playStoredVoice(key,slot){
- const blob=await getMedia(key);
- if(!blob)return false;
- const url=URL.createObjectURL(blob);
- const audio=new Audio(url);
- audio.preload='auto';
- audio.volume=(typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice:100)/100;
- audio.onended=()=>URL.revokeObjectURL(url);
- audio.onerror=()=>URL.revokeObjectURL(url);
- if(slot==='attack')customAttackAudio=audio;else customDefeatAudio=audio;
- try{await audio.play();return true;}catch(e){URL.revokeObjectURL(url);return false;}
-}
-const basePlayAttack=playAttack;
-playAttack=function(){
- if(window.__escapeMasterMute)return;
- getMedia('attackVoice').then(blob=>{
-  if(blob){playStoredVoice('attackVoice','attack').catch(()=>{});}
-  else basePlayAttack();
- }).catch(()=>basePlayAttack());
-};
-const baseEndGame=endGame;
-endGame=function(){
- if(window.__escapeMasterMute){gameOver=true;bgmAudio.pause();bgmStarted=false;return;}
- getMedia('defeatVoice').then(async blob=>{
-  if(blob){
-   try{if(typeof gameoverAudio!=='undefined'){gameoverAudio.pause();gameoverAudio.currentTime=0;}}catch(e){}
-   await playStoredVoice('defeatVoice','defeat');
-  }
- }).catch(()=>{});
- baseEndGame();
-};
 getMedia('playerImage').then(blob=>{if(blob)previewImage(blob);}).catch(()=>{});
 getMedia('attackVoice').then(blob=>{if(blob){voiceBlob=blob;if(previewBtn)previewBtn.disabled=false;if(saveVoiceBtn)saveVoiceBtn.disabled=false;msgSet('保存済みの攻撃ボイスがあります。');}}).catch(()=>{});
 applyMute();
