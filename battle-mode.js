@@ -27,8 +27,12 @@
   #shamarupi-modal .sw-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
   #shamarupi-modal #sw-arena{width:100%;height:min(56vh,440px);min-height:260px;background:linear-gradient(#111827,#172554);border:2px solid #64748b;border-radius:16px;display:block;touch-action:none}
   #shamarupi-modal .sw-hud{display:flex;justify-content:space-between;gap:10px;font-weight:900;margin:10px 0}
-  #shamarupi-modal .sw-controls{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
-  #shamarupi-modal .sw-controls button{min-width:44%;min-height:56px;background:#475569;touch-action:none}
+  #shamarupi-modal .sw-controls{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:14px;padding:4px 8px}
+  #shamarupi-modal .sw-joystick{width:142px;height:142px;flex:0 0 142px;border-radius:50%;position:relative;touch-action:none;user-select:none;background:radial-gradient(circle,#475569 0 48%,#334155 50% 68%,#1e293b 70%);border:2px solid #94a3b8;box-shadow:inset 0 4px 14px #0006,0 5px 14px #0004}
+  #shamarupi-modal .sw-joystick:before{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:#cbd5e1;transform:translate(-50%,-50%)}
+  #shamarupi-modal .sw-joystick-knob{position:absolute;left:50%;top:50%;width:62px;height:62px;border-radius:50%;transform:translate(-50%,-50%);background:linear-gradient(145deg,#e2e8f0,#64748b);border:2px solid #f8fafc;box-shadow:0 4px 12px #0008;pointer-events:none}
+  #shamarupi-modal #sw-fire{min-width:112px;min-height:78px;flex:0 0 112px;border-radius:22px;background:linear-gradient(145deg,#7c3aed,#5b21b6);font-size:18px;touch-action:none;user-select:none}
+  @media(max-width:390px){#shamarupi-modal .sw-joystick{width:122px;height:122px;flex-basis:122px}#shamarupi-modal .sw-joystick-knob{width:54px;height:54px}#shamarupi-modal #sw-fire{min-width:96px;flex-basis:96px}}
   #shamarupi-modal .sw-small{font-size:12px;color:#cbd5e1;text-align:center}
   #shamarupi-modal .sw-shop{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
   #shamarupi-modal .sw-items{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 16px}
@@ -94,8 +98,11 @@
     <section id="sw-game" class="sw-panel" hidden>
       <div class="sw-hud"><span>YOU <b id="sw-myhp">100</b> HP</span><span><b id="sw-mode">CPU戦</b></span><span>相手 <b id="sw-enemyhp">100</b> HP</span></div>
       <canvas id="sw-arena" width="900" height="500"></canvas>
-      <div class="sw-controls"><button id="sw-left">◀ 移動</button><button id="sw-fire">発射！</button><button id="sw-right">移動 ▶</button></div>
-      <p class="sw-small">PC：A/Dまたは←/→で移動、Spaceで攻撃。スマホ：移動・発射ボタンを長押し。</p>
+      <div class="sw-controls">
+        <div id="sw-stick-base" class="sw-joystick" role="application" aria-label="移動スティック"><div id="sw-stick-knob" class="sw-joystick-knob"></div></div>
+        <button id="sw-fire" type="button">発射！</button>
+      </div>
+      <p class="sw-small">スマホ：左のスティックを倒して移動、発射ボタンを長押し。PC：A/Dまたは←/→で移動、Spaceで攻撃。</p>
       <div class="sw-actions"><button id="sw-friend-copy-wait" class="secondary" disabled>合言葉をコピー</button></div>
       <div class="sw-actions"><button id="sw-leave" class="secondary">対戦を終了</button></div>
     </section>
@@ -136,10 +143,21 @@
   entry.onclick=open;$('sw-close').onclick=close;
   function status(t){$('sw-status').textContent=t;}
   function setInput(key,on){state.keys[key]=on;}
-  [['sw-left','left'],['sw-right','right'],['sw-fire','fire']].forEach(([id,k])=>{
-    const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();setInput(k,true);b.setPointerCapture(e.pointerId)});
-    ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>setInput(k,false)));
-  });
+  const stick=$('sw-stick-base'),knob=$('sw-stick-knob');
+  function moveStick(e){
+    const rect=stick.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+    const max=rect.width*.29,dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.hypot(dx,dy),scale=dist>max?max/dist:1;
+    const x=dx*scale,y=dy*scale;
+    knob.style.left='calc(50% + '+x+'px)';knob.style.top='calc(50% + '+y+'px)';
+    setInput('left',x < -10);setInput('right',x > 10);
+  }
+  function resetStick(){knob.style.left='50%';knob.style.top='50%';setInput('left',false);setInput('right',false);}
+  stick.addEventListener('pointerdown',e=>{e.preventDefault();stick.setPointerCapture(e.pointerId);moveStick(e)});
+  stick.addEventListener('pointermove',e=>{if(e.buttons||e.pressure>0)moveStick(e)});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>stick.addEventListener(ev,resetStick));
+  const fireButton=$('sw-fire');
+  fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireButton.setPointerCapture(e.pointerId);setInput('fire',true)});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>fireButton.addEventListener(ev,()=>setInput('fire',false)));
   window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight',' ','a','d','A','D'].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setInput('left',true);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setInput('right',true);if(e.key===' ')setInput('fire',true)}});
   window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setInput('left',false);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setInput('right',false);if(e.key===' ')setInput('fire',false)});
   function chargeBattleCoins(cost,label,done){
