@@ -47,7 +47,13 @@
         <button id="sw-equip-beam" class="secondary">イエロービームを装備</button>
       </div>
       <p class="sw-small">ビームは対戦で3勝すると解放。ゲーム本編のコインやショップには触れません。</p>
-      <div class="sw-actions"><button id="sw-match">オンライン対戦を開始</button></div>
+      <div class="sw-actions"><button id="sw-match">ランダムオンライン対戦</button></div>
+      <div style="margin-top:18px;border-top:1px solid #ffffff24;padding-top:14px">
+        <b>友達と合言葉で対戦</b>
+        <p class="sw-small">同じ合言葉を入力した2人でマッチングします</p>
+        <input id="sw-friend-code" maxlength="20" autocomplete="off" placeholder="合言葉（2〜20文字）" style="width:100%;padding:13px;border-radius:10px;border:1px solid #64748b;background:#0f172a;color:white;font-size:16px;margin:8px 0">
+        <div class="sw-actions"><button id="sw-friend-join">合言葉で部屋に入る／作る</button></div>
+      </div>
       <p id="sw-status" style="text-align:center;min-height:24px">準備完了</p>
     </section>
     <section id="sw-game" class="sw-panel" hidden>
@@ -88,7 +94,7 @@
   $('sw-beam-buy').onclick=()=>{if(state.wins>=3){status('ビームは解放済み！')}};
   $('sw-equip-orb').onclick=()=>{state.weapon='orb';persist();showHome()};
   $('sw-equip-beam').onclick=()=>{if(state.wins>=3){state.weapon='beam';persist();showHome()}else status('ビームは3勝で解放！')};
-  $('sw-match').onclick=startMatch;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
+  $('sw-match').onclick=startMatch;$('sw-friend-join').onclick=joinFriendRoom;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
   $('sw-leave').onclick=()=>{stopGame();showHome()};
   $('sw-arena').addEventListener('pointerdown',e=>{if(e.pointerType==='touch')setInput('fire',true)});
   $('sw-arena').addEventListener('pointerup',()=>setInput('fire',false));
@@ -113,6 +119,37 @@
       state.searchPoll=poll;
     }catch(e){console.warn(e);status('オンライン接続に失敗。CPU戦を開始します');startCpu();}
   }
+  function friendTopic(code){
+    let h=2166136261;
+    for(let i=0;i<code.length;i++){h^=code.charCodeAt(i);h=Math.imul(h,16777619)}
+    return 'shamarupi-friend-'+(h>>>0).toString(36);
+  }
+  async function joinFriendRoom(){
+    const code=String($('sw-friend-code').value||'').trim().toUpperCase();
+    if(code.length<2||code.length>20){status('合言葉は2〜20文字で入力してください');return}
+    stopGame();state.ended=false;state.hp=100;state.enemyHp=100;state.shots=[];state.enemyShots=[];
+    $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;
+    $('sw-mode').textContent='友達対戦';status('合言葉の部屋に接続中…');
+    try{
+      const client=await getClient();
+      state.mode='friend-waiting';
+      state.friendChannel=client.channel(friendTopic(code),{config:{presence:{key:state.user.id}}});
+      state.friendChannel.on('presence',{event:'sync'},()=>{
+        if(state.mode!=='friend-waiting')return;
+        const members=Object.entries(state.friendChannel.presenceState()).flatMap(([key,arr])=>(arr||[]).map(v=>({uid:v.uid||key,joined:v.joined||0}))).filter(p=>p.uid);
+        const others=[...new Map(members.map(p=>[p.uid,p])).values()].filter(p=>p.uid!==state.user.id).sort((a,b)=>a.joined-b.joined);
+        if(others.length){status('友達が見つかった！対戦準備中…');startOnline(others[0].uid)}
+      });
+      state.friendChannel.subscribe(async s=>{
+        if(s==='SUBSCRIBED'&&state.mode==='friend-waiting'){
+          await state.friendChannel.track({uid:state.user.id,joined:Date.now()});
+          status('部屋を作成／参加しました。友達にも同じ合言葉を入力してもらってね！');
+        }else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){
+          status('部屋に接続できませんでした。もう一度お試しください');stopGame();showHome();
+        }
+      });
+    }catch(e){console.warn(e);status('接続に失敗しました：'+(e.message||'通信エラー'));stopGame();showHome()}
+  }
   function tryPair(){
     if(!state.lobby||state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
     const all=state.lobby.presenceState();const peers=Object.entries(all).flatMap(([key,arr])=>(arr||[]).map(v=>({uid:v.uid||key,joined:v.joined||0}))).filter(p=>p.uid);
@@ -122,7 +159,7 @@
   async function startOnline(otherUid){
     if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
     state.mode='connecting';if(state.searchPoll)clearInterval(state.searchPoll);
-    state.opponent=otherUid;state.roomId=[state.user.id,otherUid].sort().join('_');state.direction=state.user.id.localeCompare(otherUid)<0?1:-1;state.x=state.direction===1?.18:.82;state.ex=state.direction===1?.82:.18;status('相手が見つかった！対戦準備中…');
+    state.opponent=otherUid;if(state.friendChannel){state.client.removeChannel(state.friendChannel);state.friendChannel=null}state.roomId=[state.user.id,otherUid].sort().join('_');state.direction=state.user.id.localeCompare(otherUid)<0?1:-1;state.x=state.direction===1?.18:.82;state.ex=state.direction===1?.82:.18;status('相手が見つかった！対戦準備中…');
     const roomId=state.roomId;
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,100);}});
@@ -166,7 +203,7 @@
       $('sw-rating-result').textContent+=' 現在 '+state.rating+' RP';
     }catch(e){console.warn('rating update:',e);$('sw-rating-result').textContent='レート更新に失敗しました。再ログイン後に確認してください。';}
   }
-  function cleanupChannels(){if(state.client&&state.room){state.client.removeChannel(state.room);state.room=null}if(state.client&&state.lobby){state.client.removeChannel(state.lobby);state.lobby=null}}
+  function cleanupChannels(){if(state.client&&state.room){state.client.removeChannel(state.room);state.room=null}if(state.client&&state.lobby){state.client.removeChannel(state.lobby);state.lobby=null}if(state.client&&state.friendChannel){state.client.removeChannel(state.friendChannel);state.friendChannel=null}}
   function stopGame(){if(state.raf)cancelAnimationFrame(state.raf);if(state.searchPoll)clearInterval(state.searchPoll);state.mode='idle';state.keys={};cleanupChannels()}
   function tick(){
     if(state.mode!=='playing'&&state.mode!=='cpu')return;
