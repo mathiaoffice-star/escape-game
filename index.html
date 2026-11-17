@@ -96,7 +96,7 @@ const landscapeStyles = `
 }
 `;
 html=html.replace('</style>',landscapeStyles+'</style>');
-const fullLandscapeStyles = \`
+const fullLandscapeStyles = `
 /* Phone: rotate the entire app, including menus and shop, into landscape */
 @media (orientation:portrait) and (max-width:900px) and (pointer:coarse){
  html,body{width:100%;height:100%;min-height:0;overflow:hidden}
@@ -134,7 +134,7 @@ const fullLandscapeStyles = \`
  .vj-ring{width:min( min(36vw, 34vh), 150px);height:min( min(36vw, 34vh), 150px);border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle,#e2e8f0 0 46%,#cbd5e1 48% 68%,#94a3b8 70% 100%);border:2px solid #64748b;box-shadow:inset 0 3px 8px #0002,0 3px 8px #0002;touch-action:none}
  .vj-thumb{width:42%;height:42%;border-radius:50%;background:linear-gradient(145deg,#fff,#94a3b8);border:2px solid #64748b;box-shadow:0 3px 7px #0003;pointer-events:none;will-change:transform}
 }
-\`;
+`;
 html=html.replace('</style>',fullLandscapeStyles+'</style>');
 html=html.replace('スマホ：画面下の矢印ボタンで移動・「攻撃！」で攻撃','スマホ：左のスティックで移動・右の「攻撃！」で攻撃');
 html=html.replace(/コイン/g,'金の玉');
@@ -150,7 +150,8 @@ const bootScripts=[
  './customize.js?v=voice-loader-dom-7',
  './stripe-store.js?v=ios-audio2',
  './battle-mode.js?v=27',
- './voice-fix.js?v=dom-loader-3'
+ './voice-fix.js?v=dom-loader-3',
+ './virtual-joystick.js?v=1'
 ];
 for(const src of bootScripts){
  await new Promise(resolve=>{
