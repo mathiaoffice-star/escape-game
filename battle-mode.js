@@ -208,7 +208,7 @@
       state.lobby.on('presence',{event:'sync'},()=>{if(token===state.matchToken)tryPair()});
       await timeout(new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('ロビー接続タイムアウト')),8000);state.lobby.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(t);state.lobby.track({uid,joined:Date.now(),nick:'PLAYER'}).then(resolve,reject)}if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(t);reject(new Error('ロビーに接続できません'))}})}),9000,'ロビー接続');
       if(token!==state.matchToken)return;
-      state.mode='searching';tryPair();state.cpuAt=Date.now()+15000;
+      state.mode='searching';tryPair();state.cpuAt=Date.now()+5000;
       const poll=setInterval(()=>{if(token!==state.matchToken||state.mode!=='searching'){clearInterval(poll);return}tryPair();if(Date.now()>=state.cpuAt){clearInterval(poll);startCpu()}},250);
       state.searchPoll=poll;
     }catch(e){if(token!==state.matchToken)return;console.warn(e);status('オンライン接続に失敗。CPU戦を開始します');startCpu();}
@@ -304,15 +304,8 @@
   function playVoiceBuffer(buffer){if(!buffer||!battleAudio)return;try{if(battleAudio.state==='suspended')battleAudio.resume();const source=battleAudio.createBufferSource();source.buffer=buffer;source.connect(battleAudio.destination);source.start()}catch(e){console.warn('voice playback failed',e)}}
   function startBattleAudio(){
     try{
-      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-      if(!battleAudio)battleAudio=new AC();
-      if(battleAudio.state==='suspended')battleAudio.resume().catch(()=>{});
-      if(!bgmOscillators.length){
-        const master=battleAudio.createGain();master.gain.value=.035;master.connect(battleAudio.destination);
-        [110,164.81].forEach((hz,index)=>{const osc=battleAudio.createOscillator(),gain=battleAudio.createGain();osc.type=index?'triangle':'sine';osc.frequency.value=hz;gain.gain.value=index?.22:.45;osc.connect(gain);gain.connect(master);osc.start();bgmOscillators.push(osc)});
-        const notes=[220,261.63,293.66,261.63,196,220,246.94,220];
-        bgmTimer=setInterval(()=>{if(!battleAudio||battleAudio.state!=='running')return;const t=battleAudio.currentTime;bgmOscillators[0].frequency.setTargetAtTime(notes[bgmStep++%notes.length]/2,t,.12);},420);
-      }
+      // 対戦中も通常ゲームと同じBGMを使用する
+      if(typeof startBGM==='function')startBGM();
     }catch(e){console.warn('battle audio unavailable',e)}
   }
   function playAttackAudio(){startBattleAudio();playVoiceBuffer(attackVoiceBuffer)}
