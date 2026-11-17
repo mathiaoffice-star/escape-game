@@ -96,6 +96,46 @@ const landscapeStyles = `
 }
 `;
 html=html.replace('</style>',landscapeStyles+'</style>');
+const fullLandscapeStyles = \`
+/* Phone: rotate the entire app, including menus and shop, into landscape */
+@media (orientation:portrait) and (max-width:900px) and (pointer:coarse){
+ html,body{width:100%;height:100%;min-height:0;overflow:hidden}
+ body{position:fixed;top:0;left:0;width:100dvh;height:100vw;min-height:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%);overflow:hidden}
+ body>.screen{width:100%;height:100%;min-height:0;max-height:100%;overflow:auto;padding:12px 18px;box-sizing:border-box}
+ body>.home-screen,body>.sub-screen{display:flex;align-items:center;justify-content:center}
+ body .menu-shell{width:min(100%,900px);max-width:900px;margin:auto;padding:12px 18px}
+ body .menu-heading{margin:0 0 10px}
+ body .menu-heading h1{font-size:clamp(24px,4vw,36px)}
+ body .menu-board{padding:12px;gap:10px}
+ body .start-tile,body .menu-tile{min-height:76px;padding:8px}
+ body .menu-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ body .tile-icon{font-size:25px}
+ body .menu-tile strong{font-size:16px}
+ body .menu-footer{margin:8px 0 0}
+ body .sub-shell{width:min(100%,900px);max-width:900px}
+ body .shop-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ body .game-screen{padding:6px 12px}
+}
+@media (orientation:landscape) and (max-height:600px) and (pointer:coarse){
+ #gameScreen:not([hidden]){position:fixed;inset:0;width:100vw;height:100dvh;padding:4px 10px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+ #gameScreen .game-topbar{flex:0 0 30px;height:30px;width:100%;margin:0}
+ #gameScreen .wrap{flex:1;min-height:0;width:100%;max-width:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr) 220px;grid-template-rows:minmax(0,1fr);gap:10px}
+ #gameScreen .wrap>h1,#gameScreen .wrap>.help{display:none}
+ #gameScreen canvas#game{grid-column:1;grid-row:1;width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:4/3;justify-self:center;align-self:center}
+ #gameScreen .controls{grid-column:2;grid-row:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto auto auto 1fr;gap:6px;align-items:center;min-width:0;min-height:0;margin:0;padding:0}
+ #gameScreen .controls .difficulty{grid-column:1/-1;font-size:12px}
+ #gameScreen .controls .difficulty select{font-size:12px;padding:4px}
+ #gameScreen .controls #attackBtn{grid-column:2;grid-row:2;min-height:48px;font-size:16px}
+ #gameScreen .controls #restartBtn{grid-column:2;grid-row:3;min-height:36px;padding:4px;font-size:12px}
+ #gameScreen .controls #gameBackToMenu{grid-column:2;grid-row:4;min-height:36px;padding:4px;font-size:12px}
+ #gameScreen .controls .pad{display:none!important}
+ #virtualJoystick{grid-column:1;grid-row:2/5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:0;touch-action:none;user-select:none}
+ #virtualJoystick>span{font-size:11px;font-weight:800;color:#64748b}
+ .vj-ring{width:min( min(36vw, 34vh), 150px);height:min( min(36vw, 34vh), 150px);border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle,#e2e8f0 0 46%,#cbd5e1 48% 68%,#94a3b8 70% 100%);border:2px solid #64748b;box-shadow:inset 0 3px 8px #0002,0 3px 8px #0002;touch-action:none}
+ .vj-thumb{width:42%;height:42%;border-radius:50%;background:linear-gradient(145deg,#fff,#94a3b8);border:2px solid #64748b;box-shadow:0 3px 7px #0003;pointer-events:none;will-change:transform}
+}
+\`;
+html=html.replace('</style>',fullLandscapeStyles+'</style>');
 html=html.replace('スマホ：画面下の矢印ボタンで移動・「攻撃！」で攻撃','スマホ：左のスティックで移動・右の「攻撃！」で攻撃');
 html=html.replace(/コイン/g,'金の玉');
 html=html.replace(/\.coin-mark\\{[^}]*\\}/, ".coin-mark{display:inline-block;width:27px;height:27px;vertical-align:-5px;border-radius:50%;background:radial-gradient(circle at 32% 27%,#fffde7 0 5%,#fff1a8 12%,#facc15 34%,#e6a700 62%,#a85d00 100%);box-shadow:inset -3px -4px 6px #8a4b0055,inset 2px 2px 5px #fff9,0 2px 3px #0003;border:1px solid #b77905}");
