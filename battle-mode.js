@@ -13,7 +13,7 @@
   function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon}))}catch(e){}}
   const style = document.createElement('style');
   style.textContent = `
-  #shamarupi-entry{position:fixed;z-index:99990;right:14px;bottom:18px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005}
+  #shamarupi-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005;vertical-align:middle;cursor:pointer}
   #shamarupi-modal{position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at 50% 0,#263c62,#080d19 72%);color:#fff;font-family:system-ui,sans-serif;display:none;overflow:auto;padding:16px;box-sizing:border-box}
   #shamarupi-modal *{box-sizing:border-box}#shamarupi-modal .sw-wrap{max-width:760px;margin:0 auto}
   #shamarupi-modal h2{text-align:center;font-size:clamp(26px,6vw,42px);margin:12px 0 4px;color:#f5eaff;text-shadow:0 3px 18px #c026d366}
@@ -31,7 +31,7 @@
   @media(min-width:700px){#shamarupi-modal .sw-controls{max-width:500px;margin:10px auto}}
   `;
   document.head.appendChild(style);
-  const entry=document.createElement('button');entry.id='shamarupi-entry';entry.textContent='⚔ シャマルピー戦争';
+  const entry=document.createElement('button');entry.id='shamarupi-entry';entry.type='button';entry.textContent='⚔ 対戦モード';
   const modal=document.createElement('div');modal.id='shamarupi-modal';
   modal.innerHTML=`<div class="sw-wrap">
     <div class="sw-actions"><button class="secondary" id="sw-close">タイトルへ戻る</button></div>
@@ -59,7 +59,19 @@
     </section>
     <section id="sw-result" class="sw-panel" hidden><h2 id="sw-result-title">勝利！</h2><p id="sw-result-text" style="text-align:center"></p><p id="sw-rating-result" style="text-align:center">レートを確認中…</p><div class="sw-actions"><button id="sw-again">もう一度対戦</button></div></section>
   </div>`;
-  document.body.append(entry,modal);
+  document.body.append(modal);
+  function placeBattleEntry(){
+    if(entry.isConnected)return true;
+    const candidates=[...document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]')];
+    const start=candidates.find(el=>/ゲームスタート|ゲーム開始|スタート/.test((el.innerText||el.value||'').replace(/\\s/g,'')));
+    if(start){start.insertAdjacentElement('afterend',entry);return true;}
+    return false;
+  }
+  if(!placeBattleEntry()){
+    const observer=new MutationObserver(()=>{if(placeBattleEntry())observer.disconnect();});
+    observer.observe(document.body,{childList:true,subtree:true});
+    setTimeout(()=>observer.disconnect(),15000);
+  }
   const $=id=>document.getElementById(id);
   function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'イエロービーム':'イエローボール';$('sw-beam-buy').textContent=state.wins>=3?'ビーム解放済み':'ビーム解放（3勝）';$('sw-beam-buy').disabled=state.wins<3;}
   function open(){modal.style.display='block';showHome();}
