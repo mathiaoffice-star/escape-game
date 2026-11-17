@@ -88,7 +88,7 @@
     return state.client;
   }
   async function startMatch(){
-    stopGame();state.ended=false;state.hp=100;state.enemyHp=100;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
+    stopGame();state.ended=false;state.hp=100;state.enemyHp=100;state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
     $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;$('sw-myhp').textContent='100';$('sw-enemyhp').textContent='100';
     status('対戦相手を検索中…');$('sw-mode').textContent='検索中';
     try{
