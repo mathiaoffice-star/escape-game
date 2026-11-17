@@ -96,9 +96,9 @@
       state.lobby=client.channel('shamarupi-war-lobby',{config:{presence:{key:uid}}});
       state.lobby.on('presence',{event:'sync'},()=>tryPair());
       await new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('ロビー接続タイムアウト')),5000);state.lobby.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(t);state.lobby.track({uid,joined:Date.now(),nick:'PLAYER'}).then(resolve)}if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(t);reject(new Error('ロビーに接続できません'))}})});
-      tryPair();state.cpuAt=Date.now()+15000;
+      state.mode='searching';tryPair();state.cpuAt=Date.now()+15000;
       const poll=setInterval(()=>{if(state.mode!=='searching'){clearInterval(poll);return}tryPair();if(Date.now()>=state.cpuAt){clearInterval(poll);startCpu()}},250);
-      state.searchPoll=poll;state.mode='searching';
+      state.searchPoll=poll;
     }catch(e){console.warn(e);status('オンライン接続に失敗。CPU戦を開始します');startCpu();}
   }
   function tryPair(){
@@ -142,7 +142,7 @@
     if(state.keys.fire)shoot();
     if(state.mode==='cpu'&&Math.random()<.025){state.enemyShots.push({x:state.ex-.02,y:state.ey,vx:-.014,life:100})}
     state.shots.forEach(s=>{s.x+=s.vx;s.life--;if(s.x>=state.ex-.035&&Math.abs(s.y-state.ey)<.11&&s.life>0){s.life=0;state.enemyHp=Math.max(0,state.enemyHp-(s.beam?22:12));if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.beam?22:12}})}});
-    state.enemyShots.forEach(s=>{s.x+=s.vx;s.life--;if(s.x<=state.x+.035&&Math.abs(s.y-state.y)<.11&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-8);if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:8}})}});
+    state.enemyShots.forEach(s=>{s.x+=s.vx;s.life--;if(s.x<=state.x+.035&&Math.abs(s.y-state.y)<.11&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-8);/* incoming projectile damages only this client */}});
     state.shots=state.shots.filter(s=>s.life>0&&s.x<1);state.enemyShots=state.enemyShots.filter(s=>s.life>0&&s.x>0);
     if(state.mode==='cpu'){state.ey=.5+Math.sin(Date.now()/900)*.22;if(state.enemyHp<=0){finish(true);return}}
     if(state.hp<=0){finish(false);return}
