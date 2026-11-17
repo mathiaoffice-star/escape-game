@@ -26,11 +26,19 @@
   #shamarupi-modal .sw-panel{background:#ffffff12;border:1px solid #ffffff24;border-radius:18px;padding:16px;margin:12px 0}
   #shamarupi-modal .sw-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
   #shamarupi-modal #sw-arena{width:100%;height:min(56vh,440px);min-height:260px;background:linear-gradient(#111827,#172554);border:2px solid #64748b;border-radius:16px;display:block;touch-action:none}
-  #shamarupi-modal .sw-hud{display:flex;justify-content:space-between;gap:10px;font-weight:900;margin:10px 0}
+  #shamarupi-modal .sw-hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:10px 0}
+  #shamarupi-modal .sw-hp{height:34px;position:relative;border:2px solid #94a3b8;border-radius:9px;overflow:hidden;background:#111827;min-width:0}
+  #shamarupi-modal .sw-hp-fill{height:100%;width:100%;transition:width .12s linear}
+  #shamarupi-modal .sw-hp.you .sw-hp-fill{background:linear-gradient(90deg,#2563eb,#38bdf8)}
+  #shamarupi-modal .sw-hp.enemy .sw-hp-fill{background:linear-gradient(90deg,#ef4444,#fb7185)}
+  #shamarupi-modal .sw-hp-number{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px;font-weight:1000;text-shadow:0 1px 3px #000,0 0 4px #000}
+  #shamarupi-modal .sw-hud-label{font-size:11px;text-align:center;font-weight:900;margin-bottom:3px}
+  #shamarupi-modal .sw-hud-center{font-size:13px;font-weight:900;text-align:center;white-space:nowrap}
   #shamarupi-modal .sw-controls{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:14px;padding:4px 8px}
   #shamarupi-modal .sw-joystick{width:142px;height:142px;flex:0 0 142px;border-radius:50%;position:relative;touch-action:none;user-select:none;background:radial-gradient(circle,#475569 0 48%,#334155 50% 68%,#1e293b 70%);border:2px solid #94a3b8;box-shadow:inset 0 4px 14px #0006,0 5px 14px #0004}
   #shamarupi-modal .sw-joystick:before{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:#cbd5e1;transform:translate(-50%,-50%)}
   #shamarupi-modal .sw-joystick-knob{position:absolute;left:50%;top:50%;width:62px;height:62px;border-radius:50%;transform:translate(-50%,-50%);background:linear-gradient(145deg,#e2e8f0,#64748b);border:2px solid #f8fafc;box-shadow:0 4px 12px #0008;pointer-events:none}
+  @media(max-width:390px){#shamarupi-modal .sw-joystick{width:116px;height:116px;flex-basis:116px}#shamarupi-modal .sw-joystick-knob{width:50px;height:50px}}
   #shamarupi-modal #sw-fire{min-width:112px;min-height:78px;flex:0 0 112px;border-radius:22px;background:linear-gradient(145deg,#7c3aed,#5b21b6);font-size:18px;touch-action:none;user-select:none}
   @media(max-width:390px){#shamarupi-modal .sw-joystick{width:122px;height:122px;flex-basis:122px}#shamarupi-modal .sw-joystick-knob{width:54px;height:54px}#shamarupi-modal #sw-fire{min-width:96px;flex-basis:96px}}
   #shamarupi-modal .sw-small{font-size:12px;color:#cbd5e1;text-align:center}
@@ -96,13 +104,17 @@
       <p id="sw-status" style="text-align:center;min-height:24px">準備完了</p>
     </section>
     <section id="sw-game" class="sw-panel" hidden>
-      <div class="sw-hud"><span>YOU <b id="sw-myhp">100</b> HP</span><span><b id="sw-mode">CPU戦</b></span><span>相手 <b id="sw-enemyhp">100</b> HP</span></div>
+      <div class="sw-hud">
+        <div><div class="sw-hud-label">YOU</div><div class="sw-hp you"><div id="sw-myhp-fill" class="sw-hp-fill"></div><span id="sw-myhp" class="sw-hp-number">150 / 150</span></div></div>
+        <div id="sw-mode" class="sw-hud-center">CPU戦</div>
+        <div><div class="sw-hud-label">相手</div><div class="sw-hp enemy"><div id="sw-enemyhp-fill" class="sw-hp-fill"></div><span id="sw-enemyhp" class="sw-hp-number">150 / 150</span></div></div>
+      </div>
       <canvas id="sw-arena" width="900" height="500"></canvas>
       <div class="sw-controls">
         <div id="sw-stick-base" class="sw-joystick" role="application" aria-label="移動スティック"><div id="sw-stick-knob" class="sw-joystick-knob"></div></div>
         <button id="sw-fire" type="button">発射！</button>
       </div>
-      <p class="sw-small">スマホ：左のスティックを倒して移動、発射ボタンを長押し。PC：A/Dまたは←/→で移動、Spaceで攻撃。</p>
+      <p class="sw-small">スマホ：左スティックで上下左右に移動、発射ボタンを長押し。PC：A/D・←/→で左右、W/S・↑/↓で上下、Spaceで攻撃。</p>
       <div class="sw-actions"><button id="sw-friend-copy-wait" class="secondary" disabled>合言葉をコピー</button></div>
       <div class="sw-actions"><button id="sw-leave" class="secondary">対戦を終了</button></div>
     </section>
@@ -149,9 +161,9 @@
     const max=rect.width*.29,dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.hypot(dx,dy),scale=dist>max?max/dist:1;
     const x=dx*scale,y=dy*scale;
     knob.style.left='calc(50% + '+x+'px)';knob.style.top='calc(50% + '+y+'px)';
-    setInput('left',x < -10);setInput('right',x > 10);
+    setInput('left',x < -10);setInput('right',x > 10);setInput('up',y < -10);setInput('down',y > 10);
   }
-  function resetStick(){knob.style.left='50%';knob.style.top='50%';setInput('left',false);setInput('right',false);}
+  function resetStick(){knob.style.left='50%';knob.style.top='50%';setInput('left',false);setInput('right',false);setInput('up',false);setInput('down',false);}
   let activeStickPointer=null;
   stick.addEventListener('pointerdown',e=>{e.preventDefault();activeStickPointer=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e)});
   stick.addEventListener('pointermove',e=>{if(e.pointerId===activeStickPointer)moveStick(e)});
@@ -265,7 +277,10 @@
   }
   function startCpu(){if(state.mode==='playing'||state.mode==='ended')return;state.mode='cpu';state.opponent='CPU';$('sw-mode').textContent='CPU戦';status('相手が見つからなかったためCPU戦を開始！');beginGame()}
   function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0))}
-  function updateHud(){$('sw-myhp').textContent=state.hp;$('sw-enemyhp').textContent=state.enemyHp}
+  function updateHud(){
+    $('sw-myhp').textContent=state.hp+' / '+state.maxHp;$('sw-enemyhp').textContent=state.enemyHp+' / '+state.maxHp;
+    $('sw-myhp-fill').style.width=(state.hp/state.maxHp*100)+'%';$('sw-enemyhp-fill').style.width=(state.enemyHp/state.maxHp*100)+'%';
+  }
   function beginGame(){state.started=Date.now();state.lastShot=0;state.lastSync=0;state.shots=[];state.enemyShots=[];state.raf=requestAnimationFrame(tick)}
   function shoot(){
     const now=Date.now(),beam=state.weapon==='beam',level=beam?state.beamLevel:state.orbLevel,delay=beam?720:420;if(now-state.lastShot<delay)return;state.lastShot=now;
@@ -304,7 +319,7 @@
   function stopGame(){if(state.raf)cancelAnimationFrame(state.raf);if(state.searchPoll)clearInterval(state.searchPoll);state.mode='idle';state.keys={};cleanupChannels()}
   function tick(){
     if(state.mode!=='playing'&&state.mode!=='cpu')return;
-    const dt=1/60;if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;state.x=clamp(state.x,.04,.88);
+    const dt=1/60;if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
     if(state.keys.fire)shoot();
     if(state.mode==='cpu'&&Math.random()<.025){state.enemyShots.push({x:state.ex-state.direction*.02,y:state.ey,vx:-state.direction*.014,life:100})}
     state.shots.forEach(s=>{s.x+=s.vx;s.life--;const reach=s.beam?.045+ s.level*.009:.035+s.level*.004;if((state.direction===1?s.x>=state.ex-reach:s.x<=state.ex+reach)&&Math.abs(s.y-state.ey)<(.11+s.level*.006)&&s.life>0){s.life=0;state.enemyHp=Math.max(0,state.enemyHp-s.damage);if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.damage}})}});
@@ -321,8 +336,15 @@
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
     for(let i=0;i<55;i++){ctx.fillStyle='#ffffff22';ctx.fillRect((i*173)%w,(i*71)%h,2,2)}
     const px=state.x*w,py=state.y*h,ex=state.ex*w,ey=state.ey*h;
-    function fighter(x,y,color,frame,label){ctx.save();ctx.shadowColor=color;ctx.shadowBlur=14;ctx.strokeStyle=color;ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(x-23,y-39,46,76,20);ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y-12,17,0,Math.PI*2);ctx.fill();ctx.fillRect(x-13,y,26,30);ctx.fillStyle='#fff';ctx.fillRect(x-7,y-15,4,4);ctx.fillRect(x+4,y-15,4,4);ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0f172a';ctx.strokeText(label,x,y-52);ctx.fillStyle='#fff';ctx.fillText(label,x,y-52);ctx.restore()}
-    fighter(px,py,'#38bdf8',true,'YOU');fighter(ex,ey,'#fb7185',false,state.opponent==='CPU'?'CPU':'RIVAL');
+    const fighterImage=document.getElementById('playerImg');
+    function fighter(x,y,color,label){
+      ctx.save();ctx.shadowColor=color;ctx.shadowBlur=16;ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(x,y,31,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;ctx.save();ctx.beginPath();ctx.arc(x,y,26,0,Math.PI*2);ctx.clip();
+      if(fighterImage&&fighterImage.complete&&fighterImage.naturalWidth){ctx.drawImage(fighterImage,x-25,y-25,50,50)}else{ctx.fillStyle='#64748b';ctx.fillRect(x-25,y-25,50,50);ctx.fillStyle='#fff';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('?',x,y+6)}
+      ctx.restore();ctx.lineWidth=7;ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=14;ctx.beginPath();ctx.arc(x,y,29,0,Math.PI*2);ctx.stroke();
+      ctx.shadowBlur=0;ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0f172a';ctx.strokeText(label,x,y-42);ctx.fillStyle='#fff';ctx.fillText(label,x,y-42);ctx.restore();
+    }
+    fighter(px,py,'#2563eb','YOU');fighter(ex,ey,'#ef4444',state.opponent==='CPU'?'CPU':'RIVAL');
     function orb(s){const x=s.x*w,y=s.y*h,level=s.level||0;ctx.save();if(s.beam){const thick=5+level*3;ctx.shadowColor='#fff';ctx.shadowBlur=12+level*3;ctx.fillStyle='#fff';ctx.fillRect(x-4,y-thick/2,42+level*5,thick);ctx.fillStyle='#e5e7eb';ctx.fillRect(x,y-thick/4,42+level*5,Math.max(2,thick/2));}else{const radius=8+level*2.2;ctx.shadowColor='#fff';ctx.shadowBlur=10+level*2;ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(x,y,radius*1.35,radius,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-radius*.25,y-radius*.25,Math.max(2,radius*.25),0,Math.PI*2);ctx.fill()}ctx.restore()}
     state.shots.forEach(orb);state.enemyShots.forEach(orb);
   }
