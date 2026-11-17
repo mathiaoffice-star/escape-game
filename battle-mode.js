@@ -65,6 +65,7 @@
       <canvas id="sw-arena" width="900" height="500"></canvas>
       <div class="sw-controls"><button id="sw-left">◀ 移動</button><button id="sw-fire">発射！</button><button id="sw-right">移動 ▶</button></div>
       <p class="sw-small">PC：A/Dまたは←/→で移動、Spaceで攻撃。スマホ：移動・発射ボタンを長押し。</p>
+      <div class="sw-actions"><button id="sw-friend-copy-wait" class="secondary" disabled>合言葉をコピー</button></div>
       <div class="sw-actions"><button id="sw-leave" class="secondary">対戦を終了</button></div>
     </section>
     <section id="sw-result" class="sw-panel" hidden><h2 id="sw-result-title">勝利！</h2><p id="sw-result-text" style="text-align:center"></p><p id="sw-rating-result" style="text-align:center">レートを確認中…</p><div class="sw-actions"><button id="sw-again">もう一度対戦</button></div></section>
@@ -98,7 +99,7 @@
   $('sw-beam-buy').onclick=()=>{if(state.wins>=3){status('ビームは解放済み！')}};
   $('sw-equip-orb').onclick=()=>{state.weapon='orb';persist();showHome()};
   $('sw-equip-beam').onclick=()=>{if(state.wins>=3){state.weapon='beam';persist();showHome()}else status('ビームは3勝で解放！')};
-  $('sw-match').onclick=startMatch;$('sw-friend-create').onclick=()=>joinFriendRoom('create');$('sw-friend-join').onclick=()=>joinFriendRoom('join');$('sw-friend-copy').onclick=copyFriendCode;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
+  $('sw-match').onclick=startMatch;$('sw-friend-create').onclick=()=>joinFriendRoom('create');$('sw-friend-join').onclick=()=>joinFriendRoom('join');$('sw-friend-copy').onclick=copyFriendCode;$('sw-friend-copy-wait').onclick=copyFriendCode;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
   $('sw-leave').onclick=()=>{stopGame();showHome()};
   $('sw-arena').addEventListener('pointerdown',e=>{if(e.pointerType==='touch')setInput('fire',true)});
   $('sw-arena').addEventListener('pointerup',()=>setInput('fire',false));
@@ -129,7 +130,7 @@
     return 'shamarupi-friend-'+(h>>>0).toString(36);
   }
   async function copyFriendCode(){
-    const code=String($('sw-friend-code').value||'').trim().toUpperCase();
+    const code=String(state.friendCode||$('sw-friend-code').value||'').trim().toUpperCase();
     if(!code)return;
     try{
       if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(code);
@@ -143,8 +144,8 @@
   async function joinFriendRoom(role){
     const code=String($('sw-friend-code').value||'').trim().toUpperCase();
     if(code.length<2||code.length>20){status('合言葉は2〜20文字で入力してください');return}
-    $('sw-friend-code').value=code;
-    $('sw-friend-copy').disabled=role!=='create';
+    $('sw-friend-code').value=code;state.friendCode=code;
+    $('sw-friend-copy').disabled=role!=='create';$('sw-friend-copy-wait').disabled=role!=='create';
     stopGame();state.ended=false;state.hp=100;state.enemyHp=100;state.shots=[];state.enemyShots=[];
     $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;
     $('sw-mode').textContent='友達対戦';status(role==='create'?'合言葉の部屋を作成中…':'合言葉の部屋に参加中…');
@@ -162,7 +163,7 @@
         if(s==='SUBSCRIBED'&&state.mode==='friend-waiting'){
           await state.friendChannel.track({uid:state.user.id,joined:Date.now(),role});
           if(role==='create'){
-            $('sw-friend-copy').disabled=false;
+            $('sw-friend-copy').disabled=false;$('sw-friend-copy-wait').disabled=false;
             status('部屋を作成しました！合言葉「'+code+'」をコピーして友達に送ってね');
           }else{
             status('合言葉の部屋に参加しました。部屋を作った友達が待っているよ！');
