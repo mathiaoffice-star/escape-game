@@ -19,7 +19,7 @@ const voiceHeading=Array.from(shopGrid.querySelectorAll('h1,h2,h3,h4,strong,b,di
  .sort((a,b)=>a.textContent.length-b.textContent.length)[0];
 if(voiceHeading){
  let scope=voiceHeading.parentElement;
- while(scope&&scope!==shopGrid&&!scope.querySelector('*')?.textContent?.includes('準備中')) scope=scope.parentElement;
+ while(scope&&scope!==shopGrid&&!scope.textContent.includes('準備中')) scope=scope.parentElement;
  const placeholder=scope&&Array.from(scope.querySelectorAll('*')).find(el=>el.children.length===0&&el.textContent.includes('準備中'));
  if(placeholder){
   const cards=document.createElement('div');
