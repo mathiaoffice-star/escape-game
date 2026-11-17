@@ -195,7 +195,7 @@
     const {data:ratingRow}=await state.client.from('battle_ratings').select('rating').eq('user_id',state.user.id).maybeSingle();state.rating=ratingRow?.rating??1000;return state.client;
   }
   async function startMatch(){
-    startBattleAudio();stopGame();const token=state.matchToken=(state.matchToken||0)+1;
+    startBattleAudio();prepareBattleVoices();stopGame();const token=state.matchToken=(state.matchToken||0)+1;
     state.ended=false;state.mode='connecting';state.hp=state.maxHp;state.enemyHp=state.maxHp;state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
     $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;updateHud();
     status('対戦相手を検索中…');$('sw-mode').textContent='検索中';
@@ -231,7 +231,7 @@
     }catch(e){status('コピーできませんでした。合言葉を長押ししてコピーしてね')}
   }
   async function joinFriendRoom(role){
-    startBattleAudio();const code=String($('sw-friend-code').value||'').trim().toUpperCase();
+    startBattleAudio();prepareBattleVoices();const code=String($('sw-friend-code').value||'').trim().toUpperCase();
     if(code.length<2||code.length>20){status('合言葉は2〜20文字で入力してください');return}
     $('sw-friend-code').value=code;state.friendCode=code;
     $('sw-friend-copy').disabled=role!=='create';$('sw-friend-copy-wait').disabled=role!=='create';
@@ -288,6 +288,20 @@
     $('sw-myhp-fill').style.width=(state.hp/state.maxHp*100)+'%';$('sw-enemyhp-fill').style.width=(state.enemyHp/state.maxHp*100)+'%';
   }
   let battleAudio=null,bgmOscillators=[],bgmTimer=null,bgmStep=0;
+  let attackVoiceBuffer=null,defeatVoiceBuffer=null;
+  async function loadVoiceBuffer(path){
+    try{const response=await fetch(path+'?v=2',{cache:'force-cache'});if(!response.ok)throw new Error('voice asset fetch failed');
+      const encoded=(await response.text()).trim(),raw=atob(encoded),bytes=new Uint8Array(raw.length);
+      for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+      return await battleAudio.decodeAudioData(bytes.buffer);
+    }catch(e){console.warn('voice load failed:',path,e);return null}
+  }
+  async function prepareBattleVoices(){
+    startBattleAudio();if(!battleAudio)return;
+    if(!attackVoiceBuffer)attackVoiceBuffer=await loadVoiceBuffer('./audio/shamarupi-attack.mp3.b64');
+    if(!defeatVoiceBuffer)defeatVoiceBuffer=await loadVoiceBuffer('./audio/nnniiii-defeat.mp3.b64');
+  }
+  function playVoiceBuffer(buffer){if(!buffer||!battleAudio)return;try{if(battleAudio.state==='suspended')battleAudio.resume();const source=battleAudio.createBufferSource();source.buffer=buffer;source.connect(battleAudio.destination);source.start()}catch(e){console.warn('voice playback failed',e)}}
   function startBattleAudio(){
     try{
       const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
@@ -301,19 +315,7 @@
       }
     }catch(e){console.warn('battle audio unavailable',e)}
   }
-  function playAttackAudio(){
-    startBattleAudio();
-    try{
-      if(battleAudio&&battleAudio.state==='running'){
-        const t=battleAudio.currentTime,o=battleAudio.createOscillator(),g=battleAudio.createGain();
-        o.type='sawtooth';o.frequency.setValueAtTime(620,t);o.frequency.exponentialRampToValueAtTime(170,t+.16);
-        g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);o.connect(g);g.connect(battleAudio.destination);o.start(t);o.stop(t+.19);
-      }
-      if('speechSynthesis'in window&&(!window.speechSynthesis.speaking)){
-        const u=new SpeechSynthesisUtterance('攻撃！');u.lang='ja-JP';u.rate=1.25;u.volume=.8;window.speechSynthesis.speak(u);
-      }
-    }catch(e){}
-  }
+  function playAttackAudio(){startBattleAudio();playVoiceBuffer(attackVoiceBuffer)}
   function segmentHitsPoint(x1,y1,x2,y2,px,py,r){
     const dx=x2-x1,dy=y2-y1,len=dx*dx+dy*dy;
     const t=len?clamp(((px-x1)*dx+(py-y1)*dy)/len,0,1):0;
@@ -328,7 +330,7 @@
     if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x+state.direction*.045,y:state.y,beam,level,damage}});
   }
   function finish(win){
-    if(state.ended)return;state.ended=true;state.mode='ended';cancelAnimationFrame(state.raf);
+    if(state.ended)return;state.ended=true;state.mode='ended';cancelAnimationFrame(state.raf);if(!win)playVoiceBuffer(defeatVoiceBuffer);
     if(win){state.wins++;persist()}
     $('sw-result-title').textContent=win?'勝利！':'敗北…';
     $('sw-result-text').textContent=(win?'相手を撃破した！':'今回は負けてしまった…')+'　通算勝利 '+state.wins+' 回';
