@@ -115,7 +115,7 @@
     setTimeout(()=>observer.disconnect(),15000);
   }
   const $=id=>document.getElementById(id);
-  function coinBalance(){try{return typeof wallet!=='undefined'?Math.max(0,Number(wallet)||0):0}catch(e){return 0}}
+  function coinBalance(){try{return typeof window.getAvailableGameCoins==='function'?window.getAvailableGameCoins():(typeof wallet!=='undefined'?Math.max(0,Number(wallet)||0):0)}catch(e){return 0}}
   const orbCosts=[100,180,280,420,600], beamCosts=[150,250,400,600,850];
   function refreshShop(){
     $('sw-coins').textContent=coinBalance().toLocaleString('ja-JP');
