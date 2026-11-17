@@ -22,6 +22,29 @@ function init(){
   window.__voiceFixAttack=a?new Audio(URL.createObjectURL(a)):null;
   window.__voiceFixDefeat=d?new Audio(URL.createObjectURL(d)):null;
  }
+ let vfAttackIndex=0;
+ const baseAttack=window.playAttack;
+ if(typeof baseAttack==='function'&&!window.__voiceFixAttackWrapped){
+  window.playAttack=function(){
+   if(window.__escapeMasterMute)return;
+   const a=window.__voiceFixAttack;
+   if(!a){baseAttack();return;}
+   try{a.volume=typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice/100:1;a.pause();a.currentTime=0;a.play().catch(()=>{});}catch(e){}
+  };
+  window.__voiceFixAttackWrapped=true;
+ }
+ const baseEnd=window.endGame;
+ if(typeof baseEnd==='function'&&!window.__voiceFixEndWrapped){
+  window.endGame=function(){
+   if(gameOver)return;
+   const a=window.__voiceFixDefeat;
+   if(!a){baseEnd();return;}
+   if(window.__escapeMasterMute){baseEnd();return;}
+   gameOver=true;bgmAudio.pause();bgmStarted=false;
+   try{a.volume=typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice/100:1;a.pause();a.currentTime=0;a.play().catch(()=>{});}catch(e){}
+  };
+  window.__voiceFixEndWrapped=true;
+ }
  const preview=async key=>{try{const b=await load(paths[key]),u=URL.createObjectURL(b),a=new Audio(u);a.onended=()=>URL.revokeObjectURL(u);await a.play();say('試聴中');}catch(e){say('試聴エラー：'+e.message);}};
  async function setup(key,label){
   try{
