@@ -1,6 +1,9 @@
 (()=> {
 'use strict';
 const DB='escapeGameCustomMediaV1', STORE='media';
+// 音声状態はイベント登録より前に初期化し、iOSでの初回設定時のTDZを防ぐ
+let customAttackPool=[],customAttackIndex=0,customDefeatAudio=null;
+let customAttackUrl=null,customDefeatUrl=null;
 const $=id=>document.getElementById(id);
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB,3);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE);};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
 async function getMedia(key){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).get(key);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error);});}
@@ -100,8 +103,6 @@ $('resetCustomVoice').addEventListener('click',async()=>{await removeMedia('atta
 window.__pauseGameAudioForRecording=()=>{try{document.querySelectorAll('audio,video').forEach(el=>{try{el.pause();el.currentTime=0;}catch(e){}});if(typeof bgmAudio!=='undefined'){bgmAudio.pause();bgmAudio.currentTime=0;}if(typeof attackAudioPool!=='undefined')attackAudioPool.forEach(a=>{a.pause();a.currentTime=0;});if(typeof gameoverAudio!=='undefined'){gameoverAudio.pause();gameoverAudio.currentTime=0;}if(typeof audioContext!=='undefined'&&audioContext&&audioContext.state==='running')audioContext.suspend().catch(()=>{});}catch(e){console.warn('audio pause:',e);}};
 // 購入済み音声を専用Audioプールで再生する。IndexedDB読込は事前に済ませ、
  // 攻撃・敗北イベント内では同期的に audio.play() を呼ぶ（iOSのユーザー操作制限対策）。
-let customAttackPool=[],customAttackIndex=0,customDefeatAudio=null;
-let customAttackUrl=null,customDefeatUrl=null;
 function clearCustomAudio(){
  customAttackPool.forEach(a=>{try{a.pause();a.src='';}catch(e){}});
  customAttackPool=[];
