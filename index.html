@@ -70,55 +70,9 @@ html=html.replace('このブラウザ内に記録されます。','オンライ�
 
 const extraStyles = ".coin-mark{display:inline-block;width:25px;height:25px;vertical-align:-4px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff4a8 0 12%,#facc15 30%,#d97706 78%);border:2px solid #a16207;box-shadow:inset 0 0 0 2px #fde68a,0 1px 2px #0002}\n.joystick-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;margin:4px 8px}.joystick-wrap>span{font-size:12px;color:#64748b;font-weight:700}.joystick{width:124px;height:124px;border-radius:50%;background:radial-gradient(circle,#e2e8f0 0 48%,#cbd5e1 50% 68%,#94a3b8 70% 100%);border:2px solid #64748b;box-shadow:inset 0 3px 8px #0002,0 3px 8px #0002;display:grid;place-items:center;touch-action:none;user-select:none}.joystick-thumb{width:52px;height:52px;border-radius:50%;background:linear-gradient(145deg,#fff,#94a3b8);border:2px solid #64748b;box-shadow:0 3px 7px #0003;pointer-events:none}\n@media(max-width:600px){.controls{grid-template-columns:1fr 1fr;align-items:center}.joystick-wrap{grid-column:1;grid-row:2/5;margin:0 auto}.controls #attackBtn{grid-column:2;grid-row:2;min-height:58px}.controls #restartBtn{grid-column:2;grid-row:3}.controls #gameBackToMenu{grid-column:2;grid-row:4}.menu-heading h1{font-size:clamp(23px,6vw,34px)}}";
 html=html.replace('</style>',extraStyles+'</style>');
-const landscapeStyles = String.raw`@media (orientation:landscape) and (max-height:600px) and (pointer:coarse) {
-html,body{width:100%;height:100%;min-height:100%;overflow:hidden;overscroll-behavior:none}
-body{display:block}
-.screen{width:100%;height:100dvh;min-height:100dvh;overflow:auto;box-sizing:border-box}
-#gameScreen:not([hidden]){position:fixed;inset:0;width:100vw;height:100dvh;min-height:0;box-sizing:border-box;padding:calc(env(safe-area-inset-top) + 4px) calc(env(safe-area-inset-right) + 8px) calc(env(safe-area-inset-bottom) + 4px) calc(env(safe-area-inset-left) + 8px);display:flex;flex-direction:column;overflow:hidden;gap:4px}
-#gameScreen .game-topbar{width:100%;max-width:none;flex:0 0 34px;height:34px;margin:0;box-sizing:border-box}
-#gameScreen .game-topbar .back-button,#gameScreen .game-wallet{padding:5px 12px;font-size:13px}
-#gameScreen .wrap{width:100%;max-width:none;min-width:0;min-height:0;flex:1;padding:0;margin:0;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) 156px;grid-template-rows:minmax(0,1fr);gap:8px;align-items:stretch}
-#gameScreen .wrap>h1,#gameScreen .wrap>.help{display:none}
-#gameScreen canvas#game{grid-column:1;grid-row:1;align-self:center;justify-self:center;width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:contain;margin:0;border-radius:8px}
-#gameScreen .controls{grid-column:2;grid-row:1;min-width:0;min-height:0;margin:0;padding:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:6px;overflow:hidden}
-#gameScreen .controls .difficulty{font-size:11px;justify-content:space-between;gap:4px}
-#gameScreen .controls .difficulty select{min-width:0;width:88px;padding:5px;font-size:12px}
-#gameScreen .controls>button{width:100%;min-height:38px;padding:6px 4px;font-size:13px;line-height:1.15}
-#gameScreen .controls #attackBtn{min-height:52px;font-size:17px}
-#gameScreen .controls .pad{display:grid;grid-template-columns:repeat(3,42px);grid-template-rows:repeat(2,36px);gap:3px;margin:0 auto;min-width:0;order:5}
-#gameScreen .controls .pad button{display:block;min-width:0;min-height:0;width:42px;height:36px;padding:0;font-size:17px;line-height:1}
-}
-@media (orientation:portrait) and (max-width:900px) and (pointer:coarse){
-html,body{width:100%;height:100%;min-height:100%;overflow:hidden;overscroll-behavior:none}
-body{position:fixed;top:0;left:100vw;width:100dvh;height:100vw;min-height:0;transform-origin:top left;transform:rotate(90deg);display:block;overflow:hidden}
-.screen{width:100%;height:100%;min-height:100%;overflow:auto;box-sizing:border-box;padding:12px 14px}
-.home-screen{align-items:center;justify-content:center}
-.menu-shell{width:min(100%,720px);max-height:100%;overflow:auto;margin:auto;padding:12px 16px}
-.menu-heading{margin:0 0 8px}
-.menu-heading h1{font-size:clamp(22px,4vw,32px)}
-.menu-heading p{margin:3px 0 0;font-size:12px}
-.menu-board{padding:12px;gap:9px}
-.start-tile{min-height:68px;padding:8px}
-.start-tile strong{font-size:22px}
-.menu-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.menu-tile{min-height:70px;padding:8px}
-.menu-tile strong{font-size:15px}
-.tile-icon{font-size:24px}
-.menu-footer{margin:6px 0 0;font-size:10px}
-#gameScreen:not([hidden]){position:absolute;inset:0;width:100%;height:100%;min-height:0;padding:4px 8px;display:flex;flex-direction:column;overflow:hidden;gap:4px}
-#gameScreen .game-topbar{width:100%;height:30px;flex:0 0 30px;margin:0}
-#gameScreen .wrap{width:100%;max-width:none;min-width:0;min-height:0;flex:1;padding:0;margin:0;display:grid;grid-template-columns:minmax(0,1fr) 156px;grid-template-rows:minmax(0,1fr);gap:8px}
-#gameScreen .wrap>h1,#gameScreen .wrap>.help{display:none}
-#gameScreen canvas#game{grid-column:1;grid-row:1;width:auto;height:auto;max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:contain;align-self:center;justify-self:center;margin:0}
-#gameScreen .controls{grid-column:2;grid-row:1;min-width:0;min-height:0;margin:0;padding:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:5px;overflow:hidden}
-#gameScreen .controls .difficulty{font-size:11px;justify-content:space-between;gap:3px}
-#gameScreen .controls .difficulty select{min-width:0;width:86px;padding:4px;font-size:11px}
-#gameScreen .controls>button{width:100%;min-height:34px;padding:5px 3px;font-size:12px}
-#gameScreen .controls #attackBtn{min-height:48px;font-size:16px}
-#gameScreen .controls .pad{display:grid;grid-template-columns:repeat(3,42px);grid-template-rows:repeat(2,36px);gap:3px;margin:0 auto;order:5}
-#gameScreen .controls .pad button{display:block;width:42px;height:36px;min-width:0;min-height:0;padding:0;font-size:17px}
-}`;
+const landscapeStyles = "/* Landscape game layout: larger arena, movement left, attack right */\n@media (orientation:landscape) and (max-height:700px) and (pointer:coarse) {\n html,body{width:100%;height:100%;min-height:100%;overflow:hidden;overscroll-behavior:none}\n body{display:block}\n #gameScreen:not([hidden]){position:fixed;inset:0;width:100vw;height:100dvh;min-height:0;box-sizing:border-box;padding:calc(env(safe-area-inset-top) + 2px) calc(env(safe-area-inset-right) + 4px) calc(env(safe-area-inset-bottom) + 2px) calc(env(safe-area-inset-left) + 4px);display:flex;flex-direction:column;overflow:hidden;gap:2px}\n #gameScreen .game-topbar{position:absolute;z-index:12;top:calc(env(safe-area-inset-top) + 4px);left:calc(env(safe-area-inset-left) + 6px);right:calc(env(safe-area-inset-right) + 6px);width:auto;max-width:none;height:34px;margin:0;pointer-events:none}\n #gameScreen .game-topbar>*{pointer-events:auto}\n #gameScreen .game-topbar .back-button,#gameScreen .game-wallet{padding:4px 10px;font-size:12px}\n #gameScreen .wrap{position:absolute;inset:0;width:100%;height:100%;max-width:none;min-width:0;min-height:0;margin:0;padding:0;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:0;align-items:stretch}\n #gameScreen .wrap>h1,#gameScreen .wrap>.help{display:none}\n #gameScreen canvas#game{grid-column:1;grid-row:1;display:block;width:min(calc(100vw - 270px), 133.333dvh);height:min(100dvh,75vw);max-width:100%;max-height:100%;aspect-ratio:4/3;object-fit:fill;align-self:center;justify-self:center;margin:0;border-radius:6px}\n #gameScreen .controls{position:fixed;z-index:20;inset:0;display:block;width:100vw;height:100dvh;min-width:0;min-height:0;margin:0;padding:0;overflow:visible;pointer-events:none}\n #gameScreen .controls>*{pointer-events:auto}\n #gameScreen .controls .difficulty{position:fixed;top:calc(env(safe-area-inset-top) + 46px);right:calc(env(safe-area-inset-right) + 12px);font-size:11px;gap:4px}\n #gameScreen .controls .difficulty select{width:86px;min-width:0;padding:4px;font-size:12px}\n #gameScreen .controls .joystick-wrap{position:fixed;left:calc(env(safe-area-inset-left) + 18px);bottom:calc(env(safe-area-inset-bottom) + 16px);z-index:25;display:flex;flex-direction:column;align-items:center;gap:2px;margin:0;order:initial}\n #gameScreen .controls .joystick{width:clamp(104px,23dvh,156px);height:clamp(104px,23dvh,156px)}\n #gameScreen .controls .joystick-thumb{width:clamp(42px,9dvh,58px);height:clamp(42px,9dvh,58px)}\n #gameScreen .controls .joystick-wrap>span{font-size:10px}\n #gameScreen .controls #attackBtn{position:fixed;right:calc(env(safe-area-inset-right) + 20px);bottom:calc(env(safe-area-inset-bottom) + 38px);z-index:25;width:clamp(116px,18vw,190px);min-height:clamp(64px,15dvh,100px);padding:8px;font-size:clamp(16px,3dvh,24px);line-height:1.1}\n #gameScreen .controls #restartBtn,#gameScreen .controls #gameBackToMenu{position:fixed;right:calc(env(safe-area-inset-right) + 14px);top:calc(env(safe-area-inset-top) + 88px);z-index:24;width:116px;min-height:38px;padding:6px;font-size:12px}\n #gameScreen .controls #gameBackToMenu{top:calc(env(safe-area-inset-top) + 132px)}\n}\n@media (orientation:portrait) and (max-width:900px) and (pointer:coarse){\n #gameScreen:not([hidden]){position:relative}\n #gameScreen:not([hidden])::after{content:'スマートフォンを横向きにしてください';position:fixed;z-index:99999;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:#101827f2;color:white;font-size:22px;font-weight:800}\n}";
 html=html.replace('</style>',landscapeStyles+'</style>');
+html=html.replace('<meta name="viewport"','<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="viewport"');
 const fullLandscapeStyles = `
 /* Phone: rotate the entire app, including menus and shop, into landscape */
 @media (orientation:portrait) and (max-width:900px) and (pointer:coarse){
