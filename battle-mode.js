@@ -152,9 +152,11 @@
     setInput('left',x < -10);setInput('right',x > 10);
   }
   function resetStick(){knob.style.left='50%';knob.style.top='50%';setInput('left',false);setInput('right',false);}
-  stick.addEventListener('pointerdown',e=>{e.preventDefault();stick.setPointerCapture(e.pointerId);moveStick(e)});
-  stick.addEventListener('pointermove',e=>{if(e.buttons||e.pressure>0)moveStick(e)});
-  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>stick.addEventListener(ev,resetStick));
+  let activeStickPointer=null;
+  stick.addEventListener('pointerdown',e=>{e.preventDefault();activeStickPointer=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e)});
+  stick.addEventListener('pointermove',e=>{if(e.pointerId===activeStickPointer)moveStick(e)});
+  function releaseStick(e){if(activeStickPointer!==null&&e.pointerId!==undefined&&e.pointerId!==activeStickPointer)return;activeStickPointer=null;resetStick();}
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>stick.addEventListener(ev,releaseStick));
   const fireButton=$('sw-fire');
   fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireButton.setPointerCapture(e.pointerId);setInput('fire',true)});
   ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>fireButton.addEventListener(ev,()=>setInput('fire',false)));
