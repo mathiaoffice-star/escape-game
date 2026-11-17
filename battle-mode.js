@@ -110,11 +110,11 @@
   async function startOnline(otherUid){
     if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
     state.mode='connecting';if(state.searchPoll)clearInterval(state.searchPoll);
-    state.opponent=otherUid;status('相手が見つかった！対戦準備中…');
+    state.opponent=otherUid;state.direction=state.user.id.localeCompare(otherUid)<0?1:-1;state.x=state.direction===1?.18:.82;state.ex=state.direction===1?.82:.18;status('相手が見つかった！対戦準備中…');
     const roomId=[state.user.id,otherUid].sort().join('_');
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,100);}});
-    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-.018,life:100});});
+    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*.018,life:100});});
     state.room.on('broadcast',{event:'hit'},({payload})=>{if(payload?.uid!==state.user.id){state.hp=Math.max(0,state.hp-(payload.damage||8));updateHud();if(state.hp<=0)finish(false)}});
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
@@ -124,8 +124,8 @@
   function beginGame(){state.started=Date.now();state.lastShot=0;state.lastSync=0;state.shots=[];state.enemyShots=[];state.raf=requestAnimationFrame(tick)}
   function shoot(){
     const now=Date.now(),delay=state.weapon==='beam'?650:380;if(now-state.lastShot<delay)return;state.lastShot=now;
-    state.shots.push({x:state.x+.045,y:state.y,vx:.025,life:100,beam:state.weapon==='beam'});
-    if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x+.045,y:state.y}});
+    state.shots.push({x:state.x+state.direction*.045,y:state.y,vx:state.direction*.025,life:100,beam:state.weapon==='beam'});
+    if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x+state.direction*.045,y:state.y}});
   }
   function finish(win){
     if(state.ended)return;state.ended=true;state.mode='ended';cancelAnimationFrame(state.raf);
@@ -140,9 +140,9 @@
     if(state.mode!=='playing'&&state.mode!=='cpu')return;
     const dt=1/60;if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;state.x=clamp(state.x,.04,.88);
     if(state.keys.fire)shoot();
-    if(state.mode==='cpu'&&Math.random()<.025){state.enemyShots.push({x:state.ex-.02,y:state.ey,vx:-.014,life:100})}
-    state.shots.forEach(s=>{s.x+=s.vx;s.life--;if(s.x>=state.ex-.035&&Math.abs(s.y-state.ey)<.11&&s.life>0){s.life=0;state.enemyHp=Math.max(0,state.enemyHp-(s.beam?22:12));if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.beam?22:12}})}});
-    state.enemyShots.forEach(s=>{s.x+=s.vx;s.life--;if(s.x<=state.x+.035&&Math.abs(s.y-state.y)<.11&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-8);/* incoming projectile damages only this client */}});
+    if(state.mode==='cpu'&&Math.random()<.025){state.enemyShots.push({x:state.ex-state.direction*.02,y:state.ey,vx:-state.direction*.014,life:100})}
+    state.shots.forEach(s=>{s.x+=s.vx;s.life--;if((state.direction===1?s.x>=state.ex-.035:s.x<=state.ex+.035)&&Math.abs(s.y-state.ey)<.11&&s.life>0){s.life=0;state.enemyHp=Math.max(0,state.enemyHp-(s.beam?22:12));if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.beam?22:12}})}});
+    state.enemyShots.forEach(s=>{s.x+=s.vx;s.life--;if((state.direction===1?s.x<=state.x+.035:s.x>=state.x-.035)&&Math.abs(s.y-state.y)<.11&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-8);/* incoming projectile damages only this client */}});
     state.shots=state.shots.filter(s=>s.life>0&&s.x<1);state.enemyShots=state.enemyShots.filter(s=>s.life>0&&s.x>0);
     if(state.mode==='cpu'){state.ey=.5+Math.sin(Date.now()/900)*.22;if(state.enemyHp<=0){finish(true);return}}
     if(state.hp<=0){finish(false);return}
