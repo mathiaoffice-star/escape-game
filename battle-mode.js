@@ -277,7 +277,7 @@
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,state.maxHp);}});
     state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
-    state.room.on('broadcast',{event:'hit'},({payload})=>{if(payload?.uid!==state.user.id){state.hp=Math.max(0,state.hp-(payload.damage||8));updateHud();if(state.hp<=0)finish(false)}});
+    // Damage is applied by the incoming projectile collision below; do not apply a second broadcast hit.
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
   function startCpu(){if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;state.mode='cpu';state.opponent='CPU';$('sw-mode').textContent='CPU戦';status('相手が見つからなかったためCPU戦を開始！');beginGame()}
@@ -286,7 +286,7 @@
     $('sw-myhp').textContent=state.hp+' / '+state.maxHp;$('sw-enemyhp').textContent=state.enemyHp+' / '+state.maxHp;
     $('sw-myhp-fill').style.width=(state.hp/state.maxHp*100)+'%';$('sw-enemyhp-fill').style.width=(state.enemyHp/state.maxHp*100)+'%';
   }
-  function beginGame(){if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;state.started=Date.now();state.lastShot=0;state.lastSync=0;state.shots=[];state.enemyShots=[];updateHud();state.raf=requestAnimationFrame(tick)}
+  function beginGame(){if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;state.started=Date.now();state.lastShot=0;state.lastSync=0;state.cpuLastShot=Date.now();state.shots=[];state.enemyShots=[];updateHud();state.raf=requestAnimationFrame(tick)}
   function shoot(){
     const now=Date.now(),beam=state.weapon==='beam',level=beam?state.beamLevel:state.orbLevel,delay=beam?720:420;if(now-state.lastShot<delay)return;state.lastShot=now;
     const damage=beam?16+level*2:12+level*2;
@@ -324,11 +324,11 @@
   function stopGame(){state.matchToken=(state.matchToken||0)+1;if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;if(state.searchPoll)clearInterval(state.searchPoll);state.searchPoll=null;state.mode='idle';state.keys={};resetStick();setInput('fire',false);cleanupChannels()}
   function tick(){
     if(state.mode!=='playing'&&state.mode!=='cpu')return;
-    const dt=1/60;if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
+    const dt=1/60;const nowFrame=()=>Date.now();if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
     if(state.keys.fire)shoot();
-    if(state.mode==='cpu'&&Math.random()<.025){state.enemyShots.push({x:state.ex-state.direction*.02,y:state.ey,vx:-state.direction*.014,life:100})}
+    if(state.mode==='cpu'&&nowFrame()-state.cpuLastShot>850){state.cpuLastShot=nowFrame();state.enemyShots.push({x:state.ex-state.direction*.035,y:state.y,vx:-state.direction*.022,life:120,damage:12,targeted:true})}
     state.shots.forEach(s=>{s.x+=s.vx;s.life--;const reach=s.beam?.045+ s.level*.009:.035+s.level*.004;if((state.direction===1?s.x>=state.ex-reach:s.x<=state.ex+reach)&&Math.abs(s.y-state.ey)<(.11+s.level*.006)&&s.life>0){s.life=0;state.enemyHp=Math.max(0,state.enemyHp-s.damage);if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.damage}})}});
-    state.enemyShots.forEach(s=>{s.x+=s.vx;s.life--;const reach=s.beam?.045+s.level*.009:.035+s.level*.004;if((state.direction===1?s.x<=state.x+reach:s.x>=state.x-reach)&&Math.abs(s.y-state.y)<(.11+s.level*.006)&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-(s.damage||8));/* incoming projectile damages only this client */}});
+    state.enemyShots.forEach(s=>{const previousX=s.x;s.x+=s.vx;s.life--;const reach=s.beam?.065+s.level*.009:.055+s.level*.004;const crossed=state.direction===1?(previousX>=state.x-reach&&s.x<=state.x+reach):(previousX<=state.x+reach&&s.x>=state.x-reach);if(crossed&&Math.abs(s.y-state.y)<(s.targeted?.19:(.14+s.level*.006))&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-(s.damage||8));updateHud();if(state.hp<=0){finish(false);return}}});
     state.shots=state.shots.filter(s=>s.life>0&&s.x<1);state.enemyShots=state.enemyShots.filter(s=>s.life>0&&s.x>0);
     if(state.mode==='cpu'){state.ey=.5+Math.sin(Date.now()/900)*.22;if(state.enemyHp<=0){finish(true);return}}
     if(state.hp<=0){finish(false);return}
@@ -341,7 +341,12 @@
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
     for(let i=0;i<55;i++){ctx.fillStyle='#ffffff22';ctx.fillRect((i*173)%w,(i*71)%h,2,2)}
     const px=state.x*w,py=state.y*h,ex=state.ex*w,ey=state.ey*h;
-    const fighterImage=(document.getElementById('playerImg')||(typeof playerImg!=='undefined'?playerImg:null));
+    const fighterImage=(()=>{
+      const domImage=document.getElementById('playerImg');
+      const source=(domImage&&(domImage.currentSrc||domImage.src))||(typeof playerImg!=='undefined'&&playerImg&&(playerImg.currentSrc||playerImg.src||playerImg))||(typeof ASSETS!=='undefined'&&ASSETS.player)||'';
+      if(source instanceof HTMLImageElement)return source;
+      const image=new Image();if(typeof source==='string'&&source)image.src=source;return image;
+    })();
     function fighter(x,y,color,label){
       ctx.save();ctx.shadowColor=color;ctx.shadowBlur=16;ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(x,y,31,0,Math.PI*2);ctx.fill();
       ctx.shadowBlur=0;ctx.save();ctx.beginPath();ctx.arc(x,y,26,0,Math.PI*2);ctx.clip();
