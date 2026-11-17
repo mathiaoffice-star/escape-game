@@ -12,6 +12,7 @@ const grid=document.querySelector('#shopScreen .shop-grid');
 if(!grid) return;
 grid.appendChild(panel);
 let paidCoins=0, enemyUnlocked=false;
+window.getAvailableGameCoins=()=>Math.max(0,Number(wallet)||0)+Math.max(0,Number(paidCoins)||0);
 const status=$('stripeWalletStatus');
 function say(s){status.textContent=s;const shopStatus=$('shopStatus');if(shopStatus)shopStatus.textContent=s;}
 async function session(){await ensureOnlineUser();const {data,error}=await sbClient.auth.getSession();if(error||!data.session)throw new Error('ログイン情報を取得できません。再読み込みしてください。');return data.session;}
