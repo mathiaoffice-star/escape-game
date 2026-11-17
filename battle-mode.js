@@ -277,6 +277,7 @@
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,state.maxHp);}});
     state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
+    state.room.on('broadcast',{event:'hit'},({payload})=>{if(payload?.uid!==state.user.id){const damage=clamp(payload.damage||12,1,40);state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');if(state.hp<=0)finish(false);}});
     // Damage is applied by the incoming projectile collision below; do not apply a second broadcast hit.
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
@@ -327,9 +328,32 @@
     const dt=1/60;const nowFrame=()=>Date.now();if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
     if(state.keys.fire)shoot();
     if(state.mode==='cpu'&&nowFrame()-state.cpuLastShot>650){state.cpuLastShot=nowFrame();state.enemyShots.push({x:state.ex-state.direction*.035,y:state.y,vx:-state.direction*.022,life:160,damage:15,targeted:true})}
-    state.shots.forEach(s=>{if(s.consumed)return;const previousX=s.x;s.x+=s.vx;s.life--;const reach=s.beam?.045+s.level*.009:.035+s.level*.004;const crossed=state.direction===1?(previousX<=state.ex+reach&&s.x>=state.ex-reach):(previousX>=state.ex-reach&&s.x<=state.ex+reach);if(crossed&&Math.abs(s.y-state.ey)<(.11+s.level*.006)&&s.life>0){s.consumed=true;s.life=0;state.enemyHp=Math.max(0,state.enemyHp-s.damage);if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.damage}})}});
-    state.enemyShots.forEach(s=>{const previousX=s.x;s.x+=s.vx;s.life--;const reach=s.beam?.065+s.level*.009:.055+s.level*.004;const crossed=Math.max(previousX,s.x)>=state.x-reach&&Math.min(previousX,s.x)<=state.x+reach;if(crossed&&Math.abs(s.y-state.y)<(s.targeted?.24:(.18+s.level*.006))&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-(s.damage||8));updateHud();status('被弾！ −'+(s.damage||8)+' HP');if(state.hp<=0){finish(false);return}}});
-    state.shots=state.shots.filter(s=>!s.consumed&&s.life>0&&s.x>=0&&s.x<=1);state.enemyShots=state.enemyShots.filter(s=>s.life>0&&s.x>0);
+    for(let i=state.shots.length-1;i>=0;i--){
+      const s=state.shots[i],previousX=s.x;s.x+=s.vx;s.life--;
+      const reach=s.beam?.045+s.level*.009:.035+s.level*.004;
+      const crossed=state.direction===1?(previousX<=state.ex+reach&&s.x>=state.ex-reach):(previousX>=state.ex-reach&&s.x<=state.ex+reach);
+      if(crossed&&Math.abs(s.y-state.ey)<(.11+s.level*.006)&&s.life>0){
+        state.shots.splice(i,1);
+        const damage=clamp(s.damage||12,1,40);state.enemyHp=Math.max(0,state.enemyHp-damage);
+        if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage}});
+        continue;
+      }
+      if(s.life<=0||s.x<0||s.x>1)state.shots.splice(i,1);
+    }
+    for(let i=state.enemyShots.length-1;i>=0;i--){
+      const s=state.enemyShots[i],previousX=s.x;s.x+=s.vx;s.life--;
+      const reach=s.beam?.065+s.level*.009:.055+s.level*.004;
+      const crossed=Math.max(previousX,s.x)>=state.x-reach&&Math.min(previousX,s.x)<=state.x+reach;
+      if(crossed&&Math.abs(s.y-state.y)<(s.targeted?.24:(.18+s.level*.006))&&s.life>0){
+        state.enemyShots.splice(i,1);
+        if(state.mode==='cpu'){
+          const damage=s.damage||8;state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');
+          if(state.hp<=0){finish(false);return}
+        }
+        continue;
+      }
+      if(s.life<=0||s.x<0||s.x>1)state.enemyShots.splice(i,1);
+    }
     if(state.mode==='cpu'){state.ey=.5+Math.sin(Date.now()/900)*.22;if(state.enemyHp<=0){finish(true);return}}
     if(state.hp<=0){finish(false);return}
     const now=Date.now();if(state.mode==='playing'&&state.room&&now-state.lastSync>90){state.lastSync=now;state.room.send({type:'broadcast',event:'state',payload:{uid:state.user.id,x:state.x,y:state.y,hp:state.hp}})}
