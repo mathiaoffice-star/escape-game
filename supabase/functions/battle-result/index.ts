@@ -9,7 +9,8 @@ Deno.serve(async (req: Request) => {
     const url = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!serviceKey) return json({ error: "server_not_configured" }, 503);
-    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, "");
+    const authorization = (req.headers.get("Authorization") || "").trim();
+    const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1]?.trim() || "";
     if (!token) return json({ error: "unauthorized" }, 401);
     const admin = createClient(url, serviceKey);
     const { data: { user }, error: authError } = await admin.auth.getUser(token);
