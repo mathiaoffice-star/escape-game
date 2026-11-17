@@ -48,8 +48,38 @@ async async function presetBlob(path){const res=await fetch(path+'?v=3');if(!res
 async function previewPreset(path){try{const blob=await presetBlob(path),url=URL.createObjectURL(blob),a=new Audio(url);a.volume=audioPrefs.voice/100;a.play().catch(()=>voiceStatus('試聴を開始できませんでした。'));a.onended=()=>URL.revokeObjectURL(url);}catch(e){voiceStatus('試聴に失敗しました：'+e.message);}}
 $('previewShamarupiPreset').addEventListener('click',()=>previewPreset('./audio/shamarupi-kansai.mp3.b64'));
 $('previewNniPreset').addEventListener('click',()=>previewPreset('./audio/nni-all.mp3.b64'));
-$('setShamarupiPreset').addEventListener('click',async()=>{try{const purchased=await getMedia('attackVoicePurchased');const apply=async()=>{await putMedia('attackVoice',await presetBlob('./audio/shamarupi-kansai.mp3.b64'));await putMedia('attackVoicePurchased',true);await loadCustomAudio();voiceBlob=null;voiceStatus('攻撃ボイスを設定しました。');await refreshVoiceButtons();};if(purchased){await apply();return;}charge(200,'攻撃ボイス',apply);}catch(e){voiceStatus('設定に失敗しました：'+e.message);}});
-$('setNniPreset').addEventListener('click',async()=>{try{const purchased=await getMedia('defeatVoicePurchased');const apply=async()=>{await putMedia('defeatVoice',await presetBlob('./audio/nni-all.mp3.b64'));await putMedia('defeatVoicePurchased',true);await loadCustomAudio();voiceStatus('敗北ボイスを設定しました。');await refreshVoiceButtons();};if(purchased){await apply();return;}charge(200,'敗北ボイス',apply);}catch(e){voiceStatus('設定に失敗しました：'+e.message);}});
+async function applyPresetVoice(key,path,label){
+ let stage='購入状態の確認';
+ try{
+  const purchased=await getMedia(key+'Purchased');
+  stage='音声ファイルの取得';
+  const blob=await presetBlob(path);
+  if(!blob||!blob.size)throw new Error('音声データが空です');
+  stage='端末への保存';
+  const save=async()=>{
+   await putMedia(key,blob);
+   await putMedia(key+'Purchased',true);
+   stage='再生用データの準備';
+   try{await loadCustomAudio();}catch(e){console.warn('Audio preload warning:',e);}
+   stage='画面の更新';
+   await refreshVoiceButtons();
+   voiceStatus(label+'を設定しました。ゲームで確認してください。');
+  };
+  if(purchased){await save();return;}
+  if(window.chargeGameCoins){
+   stage='金の玉の決済';
+   await window.chargeGameCoins(200,label,save);
+   return;
+  }
+  if(wallet<200){voiceStatus('金の玉が足りません。');return;}
+  wallet-=200;saveWallet();updateShopUI();await save();
+ }catch(e){
+  console.error('Preset voice setup failed at '+stage,e);
+  voiceStatus('設定に失敗しました（'+stage+'）：'+(e&&e.message?e.message:String(e)));
+ }
+}
+$('setShamarupiPreset').addEventListener('click',()=>applyPresetVoice('attackVoice','./audio/shamarupi-kansai.mp3.b64','攻撃ボイス'));
+$('setNniPreset').addEventListener('click',()=>applyPresetVoice('defeatVoice','./audio/nni-all.mp3.b64','敗北ボイス'));
 $('resetAttackPreset').addEventListener('click',async()=>{await removeMedia('attackVoice');await loadCustomAudio();voiceBlob=null;voiceStatus('攻撃ボイスを初期設定に戻しました。');await refreshVoiceButtons();});
 $('resetDefeatVoice').addEventListener('click',async()=>{await removeMedia('defeatVoice');await loadCustomAudio();voiceStatus('敗北ボイスを初期設定に戻しました。');await refreshVoiceButtons();});
 
