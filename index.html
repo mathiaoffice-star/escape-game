@@ -77,8 +77,24 @@ html=html.replace(/\.coin-mark\\{[^}]*\\}/, ".coin-mark{display:inline-block;wid
 html=html.replaceAll('お祈りメールはいらない！','シャマルピー戦争');
 html=html.replace(/<title>[^<]*<\/title>/i,'<title>シャマルピー戦争</title>');
 html=html.replace(/ESCAPE GAME/g,'シャマルピー戦争');
-html=html.replace('</body>','<script src="./customize.js?v=voice-tdz-fix-6"><\/script><script src="./voice-fix.js?v=2"><\/script><script src="./stripe-store.js?v=ios-audio2"><\/script><script src="./battle-mode.js?v=27"><\/script></body>');
+// ゲームHTMLを書き換えてから、DOM APIで拡張スクリプトを順番にロードする。
+ // document.write内にscriptタグを埋め込む方式はiOS Safariで実行順が不安定になるため廃止。
 document.open();document.write(html);document.close();
+const bootScripts=[
+ './customize.js?v=voice-loader-dom-7',
+ './stripe-store.js?v=ios-audio2',
+ './battle-mode.js?v=27',
+ './voice-fix.js?v=dom-loader-3'
+];
+for(const src of bootScripts){
+ await new Promise(resolve=>{
+  const s=document.createElement('script');
+  s.src=src;
+  s.onload=()=>{console.info('[game loader] loaded',src);resolve();};
+  s.onerror=()=>{console.error('[game loader] failed',src);const box=document.createElement('div');box.textContent='追加機能の読み込みに失敗：'+src;box.style.cssText='position:fixed;z-index:2147483647;bottom:8px;left:8px;right:8px;background:#fee2e2;color:#991b1b;padding:10px;border-radius:8px';document.body.appendChild(box);resolve();};
+  document.body.appendChild(s);
+ });
+}
 }catch(error){document.getElementById('status').textContent='読み込みエラー：'+error.message;}
 })();
 </script>
