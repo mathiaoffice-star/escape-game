@@ -48,10 +48,10 @@ async function presetBlob(path){const res=await fetch(path+'?v=2');if(!res.ok)th
 async function previewPreset(path){try{const blob=await presetBlob(path),url=URL.createObjectURL(blob),a=new Audio(url);a.volume=audioPrefs.voice/100;a.play().catch(()=>voiceStatus('試聴を開始できませんでした。'));a.onended=()=>URL.revokeObjectURL(url);}catch(e){voiceStatus('試聴に失敗しました：'+e.message);}}
 $('previewShamarupiPreset').addEventListener('click',()=>previewPreset('./audio/shamarupi-kansai.mp3.b64'));
 $('previewNniPreset').addEventListener('click',()=>previewPreset('./audio/nni-all.mp3.b64'));
-$('setShamarupiPreset').addEventListener('click',async()=>{try{const purchased=await getMedia('attackVoicePurchased');const apply=async()=>{await putMedia('attackVoice',await presetBlob('./audio/shamarupi-kansai.mp3.b64'));await putMedia('attackVoicePurchased',true);await syncGameVoiceSources();voiceBlob=null;voiceStatus('攻撃ボイスを設定しました。');await refreshVoiceButtons();};if(purchased){await apply();return;}charge(200,'攻撃ボイス',apply);}catch(e){voiceStatus('設定に失敗しました：'+e.message);}});
-$('setNniPreset').addEventListener('click',async()=>{try{const purchased=await getMedia('defeatVoicePurchased');const apply=async()=>{await putMedia('defeatVoice',await presetBlob('./audio/nni-all.mp3.b64'));await putMedia('defeatVoicePurchased',true);await syncGameVoiceSources();voiceStatus('敗北ボイスを設定しました。');await refreshVoiceButtons();};if(purchased){await apply();return;}charge(200,'敗北ボイス',apply);}catch(e){voiceStatus('設定に失敗しました：'+e.message);}});
-$('resetAttackPreset').addEventListener('click',async()=>{await removeMedia('attackVoice');await syncGameVoiceSources();voiceBlob=null;voiceStatus('攻撃ボイスを初期設定に戻しました。');await refreshVoiceButtons();});
-$('resetDefeatVoice').addEventListener('click',async()=>{await removeMedia('defeatVoice');await syncGameVoiceSources();voiceStatus('敗北ボイスを初期設定に戻しました。');await refreshVoiceButtons();});
+$('setShamarupiPreset').addEventListener('click',async()=>{try{const purchased=await getMedia('attackVoicePurchased');const apply=async()=>{await putMedia('attackVoice',await presetBlob('./audio/shamarupi-kansai.mp3.b64'));await putMedia('attackVoicePurchased',true);await loadCustomAudio();voiceBlob=null;voiceStatus('攻撃ボイスを設定しました。');await refreshVoiceButtons();};if(purchased){await apply();return;}charge(200,'攻撃ボイス',apply);}catch(e){voiceStatus('設定に失敗しました：'+e.message);}});
+$('setNniPreset').addEventListener('click',async()=>{try{const purchased=await getMedia('defeatVoicePurchased');const apply=async()=>{await putMedia('defeatVoice',await presetBlob('./audio/nni-all.mp3.b64'));await putMedia('defeatVoicePurchased',true);await loadCustomAudio();voiceStatus('敗北ボイスを設定しました。');await refreshVoiceButtons();};if(purchased){await apply();return;}charge(200,'敗北ボイス',apply);}catch(e){voiceStatus('設定に失敗しました：'+e.message);}});
+$('resetAttackPreset').addEventListener('click',async()=>{await removeMedia('attackVoice');await loadCustomAudio();voiceBlob=null;voiceStatus('攻撃ボイスを初期設定に戻しました。');await refreshVoiceButtons();});
+$('resetDefeatVoice').addEventListener('click',async()=>{await removeMedia('defeatVoice');await loadCustomAudio();voiceStatus('敗北ボイスを初期設定に戻しました。');await refreshVoiceButtons();});
 
 function previewImage(blob){if(customImageUrl)URL.revokeObjectURL(customImageUrl);customImageUrl=URL.createObjectURL(blob);playerImg.src=customImageUrl;imgPreview.src=customImageUrl;imgPreview.style.display='block';}
 function previewVoice(blob){if(customVoiceUrl)URL.revokeObjectURL(customVoiceUrl);customVoiceUrl=URL.createObjectURL(blob);previewBtn.disabled=false;}
@@ -63,28 +63,58 @@ function setIOSAudioSession(type){try{if(navigator.audioSession)navigator.audioS
 function restoreAudioAfterRecording(){setIOSAudioSession('playback');setIOSAudioSession('auto');window.__customVoiceRecording=false;if(resumeBgmAfterRecording&&!window.__escapeMasterMute){resumeBgmAfterRecording=false;try{if(typeof bgmAudio!=='undefined')bgmAudio.muted=false;startBGM();}catch(e){}}else resumeBgmAfterRecording=false;}
 recordBtn.addEventListener('click',async()=>{try{if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw new Error('このブラウザでは録音に対応していません。音声ファイルを選択してください。');resumeBgmAfterRecording=!!(typeof bgmAudio!=='undefined'&&!bgmAudio.paused&&!window.__escapeMasterMute);window.__customVoiceRecording=true;window.__pauseGameAudioForRecording();setIOSAudioSession('auto');const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});setIOSAudioSession('play-and-record');const chunks=[];recorder=new MediaRecorder(stream);recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};recorder.onstop=()=>{voiceBlob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});stream.getTracks().forEach(t=>t.stop());restoreAudioAfterRecording();saveVoiceBtn.disabled=false;previewBtn.disabled=false;msgSet('録音しました。試聴してから設定できます。');};recorder.start();recordBtn.disabled=true;stopBtn.disabled=false;msgSet('録音中… BGMは停止しています。');}catch(e){restoreAudioAfterRecording();recordBtn.disabled=false;stopBtn.disabled=true;msgSet(e.message||'マイクを利用できません。');}});
 stopBtn.addEventListener('click',()=>{if(recorder&&recorder.state!=='inactive'){recorder.stop();recordBtn.disabled=false;stopBtn.disabled=true;}});
-$('saveCustomVoice').addEventListener('click',async()=>{if(!voiceBlob){msgSet('先に録音または音声ファイルを選択してください。');return;}charge(200,'カスタムボイス',async()=>{try{await putMedia('attackVoice',voiceBlob);await syncGameVoiceSources();msgSet('ボイスを保存しました。攻撃時に再生されます。');}catch(e){msgSet('保存に失敗しました：'+e.message);}});});
+$('saveCustomVoice').addEventListener('click',async()=>{if(!voiceBlob){msgSet('先に録音または音声ファイルを選択してください。');return;}charge(200,'カスタムボイス',async()=>{try{await putMedia('attackVoice',voiceBlob);await loadCustomAudio();msgSet('ボイスを保存しました。攻撃時に再生されます。');}catch(e){msgSet('保存に失敗しました：'+e.message);}});});
 previewBtn.addEventListener('click',()=>{if(!voiceBlob)return;const u=URL.createObjectURL(voiceBlob),a=new Audio(u);a.play().catch(()=>msgSet('試聴を開始できませんでした。'));a.onended=()=>URL.revokeObjectURL(u);});
 $('resetCustomVoice').addEventListener('click',async()=>{await removeMedia('attackVoice');voiceBlob=null;msgSet('初期ボイスに戻しました。');});
 // Attack voice playback is handled by the unified wrapper below.
 window.__pauseGameAudioForRecording=()=>{try{document.querySelectorAll('audio,video').forEach(el=>{try{el.pause();el.currentTime=0;}catch(e){}});if(typeof bgmAudio!=='undefined'){bgmAudio.pause();bgmAudio.currentTime=0;}if(typeof attackAudioPool!=='undefined')attackAudioPool.forEach(a=>{a.pause();a.currentTime=0;});if(typeof gameoverAudio!=='undefined'){gameoverAudio.pause();gameoverAudio.currentTime=0;}if(typeof audioContext!=='undefined'&&audioContext&&audioContext.state==='running')audioContext.suspend().catch(()=>{});}catch(e){console.warn('audio pause:',e);}};
-// IndexedDBの購入済み音声をゲーム本体のAudio要素へ直接反映する。
-// play()自体はゲーム本体のタップイベント内で同期的に呼ばれるため、iOS Safariでも再生開始しやすい。
-let gameAttackVoiceUrl=null,gameDefeatVoiceUrl=null;
-async function syncGameVoiceSources(){
- const [attackBlob,defeatBlob]=await Promise.all([getMedia('attackVoice'),getMedia('defeatVoice')]);
- if(typeof attackAudioPool!=='undefined'&&Array.isArray(attackAudioPool)){
-  if(gameAttackVoiceUrl)URL.revokeObjectURL(gameAttackVoiceUrl);
-  gameAttackVoiceUrl=attackBlob?URL.createObjectURL(attackBlob):null;
-  attackAudioPool.forEach(a=>{try{a.pause();a.currentTime=0;a.src=gameAttackVoiceUrl||ASSETS.attack;a.load();}catch(e){}});
- }
- if(typeof gameoverAudio!=='undefined'){
-  if(gameDefeatVoiceUrl)URL.revokeObjectURL(gameDefeatVoiceUrl);
-  gameDefeatVoiceUrl=defeatBlob?URL.createObjectURL(defeatBlob):null;
-  try{gameoverAudio.pause();gameoverAudio.currentTime=0;gameoverAudio.src=gameDefeatVoiceUrl||ASSETS.gameover;gameoverAudio.load();}catch(e){}
- }
+// 購入済み音声を専用Audioプールで再生する。IndexedDB読込は事前に済ませ、
+ // 攻撃・敗北イベント内では同期的に audio.play() を呼ぶ（iOSのユーザー操作制限対策）。
+let customAttackPool=[],customAttackIndex=0,customDefeatAudio=null;
+let customAttackUrl=null,customDefeatUrl=null;
+function clearCustomAudio(){
+ customAttackPool.forEach(a=>{try{a.pause();a.src='';}catch(e){}});
+ customAttackPool=[];
+ if(customAttackUrl){URL.revokeObjectURL(customAttackUrl);customAttackUrl=null;}
+ if(customDefeatAudio){try{customDefeatAudio.pause();customDefeatAudio.src='';}catch(e){}customDefeatAudio=null;}
+ if(customDefeatUrl){URL.revokeObjectURL(customDefeatUrl);customDefeatUrl=null;}
 }
-syncGameVoiceSources().catch(e=>console.warn('Voice source setup failed:',e));
+async function loadCustomAudio(){
+ const [attackBlob,defeatBlob]=await Promise.all([getMedia('attackVoice'),getMedia('defeatVoice')]);
+ const volume=()=>Math.max(0,Math.min(1,(typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice:100)/100));
+ if(attackBlob){
+  if(customAttackUrl)URL.revokeObjectURL(customAttackUrl);
+  customAttackUrl=URL.createObjectURL(attackBlob);
+  customAttackPool=Array.from({length:6},()=>{const a=new Audio(customAttackUrl);a.preload='auto';a.playsInline=true;a.volume=volume();return a;});
+ }else{customAttackPool=[];if(customAttackUrl)URL.revokeObjectURL(customAttackUrl);customAttackUrl=null;}
+ if(defeatBlob){
+  if(customDefeatUrl)URL.revokeObjectURL(customDefeatUrl);
+  customDefeatUrl=URL.createObjectURL(defeatBlob);
+  customDefeatAudio=new Audio(customDefeatUrl);customDefeatAudio.preload='auto';customDefeatAudio.volume=volume();
+ }else{customDefeatAudio=null;if(customDefeatUrl)URL.revokeObjectURL(customDefeatUrl);customDefeatUrl=null;}
+}
+function playCustomAttack(){
+ if(!customAttackPool.length)return false;
+ const a=customAttackPool[customAttackIndex++%customAttackPool.length];
+ try{a.volume=(typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice:100)/100;a.pause();a.currentTime=0;const p=a.play();if(p&&p.catch)p.catch(()=>{});return true;}catch(e){return false;}
+}
+const originalPlayAttack=playAttack;
+playAttack=function(){
+ if(window.__escapeMasterMute)return;
+ if(!playCustomAttack())originalPlayAttack();
+};
+const originalEndGame=endGame;
+endGame=function(){
+ if(gameOver)return;
+ if(window.__escapeMasterMute){gameOver=true;bgmAudio.pause();bgmStarted=false;return;}
+ if(customDefeatAudio){
+  gameOver=true;bgmAudio.pause();bgmStarted=false;
+  try{customDefeatAudio.volume=(typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice:100)/100;customDefeatAudio.pause();customDefeatAudio.currentTime=0;const p=customDefeatAudio.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
+  return;
+ }
+ originalEndGame();
+};
+loadCustomAudio().catch(e=>console.warn('Custom audio preload failed:',e));
 const MUTE_KEY='escapeGameMasterMuteV1';window.__escapeMasterMute=localStorage.getItem(MUTE_KEY)==='1';
 const settings=$('#settingsScreen .ranking-panel');
 const muteRow=document.createElement('div');muteRow.className='setting-row';muteRow.innerHTML='<span>🔇 マスターミュート</span><button type="button" id="masterMuteToggle">ミュート OFF</button>';settings.insertBefore(muteRow,settings.querySelector('.setting-row'));
