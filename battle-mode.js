@@ -281,7 +281,7 @@
     // Opponent damage is delivered through the dedicated damage broadcast.
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
-  function startCpu(){if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;state.mode='cpu';state.opponent='CPU';$('sw-mode').textContent='CPU戦';status('相手が見つからなかったためCPU戦を開始！');beginGame()}
+  function startCpu(){if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;if(state.searchPoll){clearInterval(state.searchPoll);state.searchPoll=null}state.mode='cpu';state.opponent='CPU';state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.hp=state.maxHp;state.enemyHp=state.maxHp;state.shots=[];state.enemyShots=[];$('sw-mode').textContent='CPU戦';updateHud();status('CPU戦開始！');beginGame()}
   function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0))}
   function updateHud(){
     $('sw-myhp').textContent=state.hp+' / '+state.maxHp;$('sw-enemyhp').textContent=state.enemyHp+' / '+state.maxHp;
