@@ -68,7 +68,24 @@ previewBtn.addEventListener('click',()=>{if(!voiceBlob)return;const u=URL.create
 $('resetCustomVoice').addEventListener('click',async()=>{await removeMedia('attackVoice');voiceBlob=null;msgSet('初期ボイスに戻しました。');});
 // Attack voice playback is handled by the unified wrapper below.
 window.__pauseGameAudioForRecording=()=>{try{document.querySelectorAll('audio,video').forEach(el=>{try{el.pause();el.currentTime=0;}catch(e){}});if(typeof bgmAudio!=='undefined'){bgmAudio.pause();bgmAudio.currentTime=0;}if(typeof attackAudioPool!=='undefined')attackAudioPool.forEach(a=>{a.pause();a.currentTime=0;});if(typeof gameoverAudio!=='undefined'){gameoverAudio.pause();gameoverAudio.currentTime=0;}if(typeof audioContext!=='undefined'&&audioContext&&audioContext.state==='running')audioContext.suspend().catch(()=>{});}catch(e){console.warn('audio pause:',e);}};
-const mediaPlayOriginal=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){if(window.__customVoiceRecording)return Promise.resolve();return mediaPlayOriginal.apply(this,arguments);};
+const mediaPlayOriginal=HTMLMediaElement.prototype.play;
+HTMLMediaElement.prototype.play=function(){
+ if(window.__customVoiceRecording)return Promise.resolve();
+ // ゲーム本体が攻撃音声プールを直接再生する経路も捕捉する
+ let isAttackPoolAudio=false;
+ try{isAttackPoolAudio=typeof attackAudioPool!=='undefined'&&Array.isArray(attackAudioPool)&&attackAudioPool.includes(this);}catch(e){}
+ if(isAttackPoolAudio&&!window.__playingCustomVoice&&!window.__escapeMasterMute){
+  const originalElement=this;
+  return getMedia('attackVoice').then(blob=>{
+   if(!blob)return mediaPlayOriginal.apply(originalElement,arguments);
+   const url=URL.createObjectURL(blob),custom=new Audio(url);
+   custom.volume=(typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice:100)/100;
+   custom.onended=()=>URL.revokeObjectURL(url);custom.onerror=()=>URL.revokeObjectURL(url);
+   return mediaPlayOriginal.call(custom).catch(err=>{URL.revokeObjectURL(url);throw err;});
+  }).catch(err=>{console.warn('Custom attack voice playback failed:',err);return mediaPlayOriginal.apply(originalElement,arguments);});
+ }
+ return mediaPlayOriginal.apply(this,arguments);
+};
 const MUTE_KEY='escapeGameMasterMuteV1';window.__escapeMasterMute=localStorage.getItem(MUTE_KEY)==='1';
 const settings=$('#settingsScreen .ranking-panel');
 const muteRow=document.createElement('div');muteRow.className='setting-row';muteRow.innerHTML='<span>🔇 マスターミュート</span><button type="button" id="masterMuteToggle">ミュート OFF</button>';settings.insertBefore(muteRow,settings.querySelector('.setting-row'));
