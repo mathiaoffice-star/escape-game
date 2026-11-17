@@ -66,7 +66,7 @@
         <button id="sw-beam-buy">ビーム解放（3勝）</button>
       </div>
       <div class="sw-actions" style="margin-top:14px">
-        <button id="sw-equip-orb" class="secondary">イエローボールを装備</button>
+        <button id="sw-equip-orb" class="secondary">白濁ボールを装備</button>
         <button id="sw-equip-beam" class="secondary">白濁ビームを装備</button>
       </div>
       <p class="sw-small">ビームは対戦で3勝すると解放。ゲーム本編のコインやショップには触れません。</p>
@@ -107,7 +107,7 @@
     setTimeout(()=>observer.disconnect(),15000);
   }
   const $=id=>document.getElementById(id);
-  function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'イエロービーム':'イエローボール';$('sw-beam-buy').textContent=state.wins>=3?'ビーム解放済み':'ビーム解放（3勝）';$('sw-beam-buy').disabled=state.wins<3;}
+  function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';$('sw-beam-buy').textContent=state.wins>=3?'ビーム解放済み':'ビーム解放（3勝）';$('sw-beam-buy').disabled=state.wins<3;}
   function open(){modal.style.display='block';showHome();}
   function close(){stopGame();modal.style.display='none';}
   entry.onclick=open;$('sw-close').onclick=close;
