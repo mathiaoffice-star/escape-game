@@ -157,7 +157,7 @@
     if(unique.length>=2){const pair=unique.slice(0,2);if(pair.some(p=>p.uid===state.user.id)){const other=pair.find(p=>p.uid!==state.user.id);if(other)startOnline(other.uid)}}
   }
   async function startOnline(otherUid){
-    if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
+    if(state.mode==='connecting'||state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
     state.mode='connecting';if(state.searchPoll)clearInterval(state.searchPoll);
     state.opponent=otherUid;if(state.friendChannel){state.client.removeChannel(state.friendChannel);state.friendChannel=null}state.roomId=[state.user.id,otherUid].sort().join('_');state.direction=state.user.id.localeCompare(otherUid)<0?1:-1;state.x=state.direction===1?.18:.82;state.ex=state.direction===1?.82:.18;status('相手が見つかった！対戦準備中…');
     const roomId=state.roomId;
