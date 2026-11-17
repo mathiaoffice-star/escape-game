@@ -50,9 +50,13 @@
       <div class="sw-actions"><button id="sw-match">ランダムオンライン対戦</button></div>
       <div style="margin-top:18px;border-top:1px solid #ffffff24;padding-top:14px">
         <b>友達と合言葉で対戦</b>
-        <p class="sw-small">同じ合言葉を入力した2人でマッチングします</p>
+        <p class="sw-small">部屋を作る人が合言葉を決めて、友達に共有します</p>
         <input id="sw-friend-code" maxlength="20" autocomplete="off" placeholder="合言葉（2〜20文字）" style="width:100%;padding:13px;border-radius:10px;border:1px solid #64748b;background:#0f172a;color:white;font-size:16px;margin:8px 0">
-        <div class="sw-actions"><button id="sw-friend-join">合言葉で部屋に入る／作る</button></div>
+        <div class="sw-actions">
+          <button id="sw-friend-create">この合言葉で部屋を作る</button>
+          <button id="sw-friend-join" class="secondary">合言葉で参加する</button>
+        </div>
+        <div class="sw-actions" style="margin-top:8px"><button id="sw-friend-copy" class="secondary" disabled>合言葉をコピー</button></div>
       </div>
       <p id="sw-status" style="text-align:center;min-height:24px">準備完了</p>
     </section>
@@ -94,7 +98,7 @@
   $('sw-beam-buy').onclick=()=>{if(state.wins>=3){status('ビームは解放済み！')}};
   $('sw-equip-orb').onclick=()=>{state.weapon='orb';persist();showHome()};
   $('sw-equip-beam').onclick=()=>{if(state.wins>=3){state.weapon='beam';persist();showHome()}else status('ビームは3勝で解放！')};
-  $('sw-match').onclick=startMatch;$('sw-friend-join').onclick=joinFriendRoom;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
+  $('sw-match').onclick=startMatch;$('sw-friend-create').onclick=()=>joinFriendRoom('create');$('sw-friend-join').onclick=()=>joinFriendRoom('join');$('sw-friend-copy').onclick=copyFriendCode;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
   $('sw-leave').onclick=()=>{stopGame();showHome()};
   $('sw-arena').addEventListener('pointerdown',e=>{if(e.pointerType==='touch')setInput('fire',true)});
   $('sw-arena').addEventListener('pointerup',()=>setInput('fire',false));
@@ -124,12 +128,26 @@
     for(let i=0;i<code.length;i++){h^=code.charCodeAt(i);h=Math.imul(h,16777619)}
     return 'shamarupi-friend-'+(h>>>0).toString(36);
   }
-  async function joinFriendRoom(){
+  async function copyFriendCode(){
+    const code=String($('sw-friend-code').value||'').trim().toUpperCase();
+    if(!code)return;
+    try{
+      if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(code);
+      else{
+        const input=$('sw-friend-code');input.focus();input.select();
+        if(!document.execCommand('copy'))throw new Error('copy failed');
+      }
+      status('合言葉「'+code+'」をコピーしました！友達に送ってね');
+    }catch(e){status('コピーできませんでした。合言葉を長押ししてコピーしてね')}
+  }
+  async function joinFriendRoom(role){
     const code=String($('sw-friend-code').value||'').trim().toUpperCase();
     if(code.length<2||code.length>20){status('合言葉は2〜20文字で入力してください');return}
+    $('sw-friend-code').value=code;
+    $('sw-friend-copy').disabled=role!=='create';
     stopGame();state.ended=false;state.hp=100;state.enemyHp=100;state.shots=[];state.enemyShots=[];
     $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;
-    $('sw-mode').textContent='友達対戦';status('合言葉の部屋に接続中…');
+    $('sw-mode').textContent='友達対戦';status(role==='create'?'合言葉の部屋を作成中…':'合言葉の部屋に参加中…');
     try{
       const client=await getClient();
       state.mode='friend-waiting';
@@ -142,8 +160,13 @@
       });
       state.friendChannel.subscribe(async s=>{
         if(s==='SUBSCRIBED'&&state.mode==='friend-waiting'){
-          await state.friendChannel.track({uid:state.user.id,joined:Date.now()});
-          status('部屋を作成／参加しました。友達にも同じ合言葉を入力してもらってね！');
+          await state.friendChannel.track({uid:state.user.id,joined:Date.now(),role});
+          if(role==='create'){
+            $('sw-friend-copy').disabled=false;
+            status('部屋を作成しました！合言葉「'+code+'」をコピーして友達に送ってね');
+          }else{
+            status('合言葉の部屋に参加しました。部屋を作った友達が待っているよ！');
+          }
         }else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){
           status('部屋に接続できませんでした。もう一度お試しください');stopGame();showHome();
         }
