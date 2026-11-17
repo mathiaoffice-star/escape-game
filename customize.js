@@ -13,16 +13,20 @@ if(!shopGrid||!$('playerImg')&&typeof playerImg==='undefined')return;
 const panel=document.createElement('section');panel.className='shop-item custom-media-panel';panel.style.gridColumn='1/-1';
 panel.innerHTML='<strong>🖼️ キャラクター画像カスタマイズ</strong><p>写真をアップロードしてプレイヤーの見た目を変更（1回200金の玉）</p><input id="customPlayerImage" type="file" accept="image/*" style="max-width:100%"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px"><img id="customPlayerPreview" alt="画像プレビュー" style="width:64px;height:64px;object-fit:cover;border-radius:12px;display:none"><button id="saveCustomPlayerImage" type="button">200金の玉で設定</button><button id="resetCustomPlayerImage" type="button">初期画像に戻す</button></div><hr style="margin:14px 0;border-color:#ddd"><details style="margin-top:10px"><summary>自分の攻撃ボイスを録音・アップロード</summary><p>録音または音声ファイルから攻撃時のボイスを設定（1回200金の玉）</p><input id="customVoiceFile" type="file" accept="audio/*" style="max-width:100%"><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button id="recordCustomVoice" type="button">録音開始</button><button id="stopCustomVoice" type="button" disabled>録音停止</button><button id="saveCustomVoice" type="button" disabled>200金の玉で設定</button><button id="previewCustomVoice" type="button" disabled>試聴</button></div></details><p id="customMediaStatus" class="tiny-note">画像・ボイスはこの端末のブラウザに保存されます。</p>';
 shopGrid.appendChild(panel);
-const voiceHeading=Array.from(shopGrid.querySelectorAll('h1,h2,h3,h4,strong,b,div,span,p')).find(el=>el.children.length===0&&el.textContent.trim().includes('追加ボイス'));
+// 「追加ボイス」カテゴリ内の「準備中」を実際のボイス商品に置き換える
+const voiceHeading=Array.from(shopGrid.querySelectorAll('h1,h2,h3,h4,strong,b,div,span,p'))
+ .filter(el=>el.children.length===0&&el.textContent.trim()==='追加ボイス')
+ .sort((a,b)=>a.textContent.length-b.textContent.length)[0];
 if(voiceHeading){
- const anchorNode=voiceHeading.closest('.shop-section,.shop-category,.shop-item')||voiceHeading;
- const host=anchorNode===voiceHeading?voiceHeading.parentElement:anchorNode;
- const a=document.createElement('div');a.innerHTML="<div id=\"presetAttackVoice\" class=\"shop-item\" style=\"margin:8px 0\"><b>⚔️ 攻撃時：シャマルピー（関西ver）</b><div style=\"display:flex;gap:8px;flex-wrap:wrap;margin-top:8px\"><button id=\"previewShamarupiPreset\" type=\"button\">▶ 試聴</button><button id=\"setShamarupiPreset\" type=\"button\">200金の玉で設定</button><button id=\"resetCustomVoice\" type=\"button\">初期ボイスに戻す</button></div></div><div id=\"presetDefeatVoice\" class=\"shop-item\" style=\"margin:8px 0\"><b>💥 敗北時：ンニイイイ（全員ver）</b><div style=\"display:flex;gap:8px;flex-wrap:wrap;margin-top:8px\"><button id=\"previewNniPreset\" type=\"button\">▶ 試聴</button><button id=\"setNniPreset\" type=\"button\">200金の玉で設定</button><button id=\"resetDefeatVoice\" type=\"button\">初期ボイスに戻す</button></div></div>";const frag=document.createDocumentFragment();while(a.firstChild)frag.appendChild(a.firstChild);
- host.appendChild(frag);
-}else{
- console.warn('「追加ボイス」欄が見つかりません。ボイス追加カードをショップ末尾に配置します。');
- const a=document.createElement('div');a.innerHTML="<div id=\"presetAttackVoice\" class=\"shop-item\" style=\"margin:8px 0\"><b>⚔️ 攻撃時：シャマルピー（関西ver）</b><div style=\"display:flex;gap:8px;flex-wrap:wrap;margin-top:8px\"><button id=\"previewShamarupiPreset\" type=\"button\">▶ 試聴</button><button id=\"setShamarupiPreset\" type=\"button\">200金の玉で設定</button><button id=\"resetCustomVoice\" type=\"button\">初期ボイスに戻す</button></div></div><div id=\"presetDefeatVoice\" class=\"shop-item\" style=\"margin:8px 0\"><b>💥 敗北時：ンニイイイ（全員ver）</b><div style=\"display:flex;gap:8px;flex-wrap:wrap;margin-top:8px\"><button id=\"previewNniPreset\" type=\"button\">▶ 試聴</button><button id=\"setNniPreset\" type=\"button\">200金の玉で設定</button><button id=\"resetDefeatVoice\" type=\"button\">初期ボイスに戻す</button></div></div>";while(a.firstChild)shopGrid.appendChild(a.firstChild);
-}
+ let scope=voiceHeading.parentElement;
+ while(scope&&scope!==shopGrid&&!scope.querySelector('*')?.textContent?.includes('準備中')) scope=scope.parentElement;
+ const placeholder=scope&&Array.from(scope.querySelectorAll('*')).find(el=>el.children.length===0&&el.textContent.includes('準備中'));
+ if(placeholder){
+  const cards=document.createElement('div');
+  cards.innerHTML="<div id=\"presetAttackVoice\" class=\"shop-item\"><b>⚔️ 攻撃ボイス：シャマルピー（関西ver）</b><p>攻撃時に再生される追加ボイス</p><div><button id=\"previewShamarupiPreset\" type=\"button\">▶ 試聴</button> <button id=\"setShamarupiPreset\" type=\"button\">200金の玉で設定</button> <button id=\"resetCustomVoice\" type=\"button\">初期ボイスに戻す</button></div></div><div id=\"presetDefeatVoice\" class=\"shop-item\"><b>💥 敗北ボイス：ンニイイイ（全員ver）</b><p>敗北時に再生される追加ボイス</p><div><button id=\"previewNniPreset\" type=\"button\">▶ 試聴</button> <button id=\"setNniPreset\" type=\"button\">200金の玉で設定</button> <button id=\"resetDefeatVoice\" type=\"button\">初期ボイスに戻す</button></div></div>";
+  placeholder.replaceWith(cards);
+ }else{console.warn('追加ボイス欄の準備中表示が見つかりません');}
+}else{console.warn('追加ボイス見出しが見つかりません');}
 let imageBlob=null,voiceBlob=null,recording=null,recorder=null,voicePreview=null,customVoiceUrl=null,customImageUrl=null,resumeBgmAfterRecording=false;
 const imgInput=$('customPlayerImage'),imgPreview=$('customPlayerPreview'),voiceInput=$('customVoiceFile'),recordBtn=$('recordCustomVoice'),stopBtn=$('stopCustomVoice'),saveVoiceBtn=$('saveCustomVoice'),previewBtn=$('previewCustomVoice'),msg=$('customMediaStatus');
 function msgSet(t){msg.textContent=t;}
