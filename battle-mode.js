@@ -336,17 +336,17 @@
     if(state.mode==='playing'&&state.enemyHp<=0){finish(true);return}
     draw();updateHud();state.raf=requestAnimationFrame(tick)
   }
+  const fighterImage=(()=>{
+    const domImage=document.getElementById('playerImg');
+    const source=(domImage&&(domImage.currentSrc||domImage.src))||(typeof playerImg!=='undefined'&&playerImg&&(playerImg.currentSrc||playerImg.src||playerImg))||(typeof ASSETS!=='undefined'&&ASSETS.player)||'';
+    if(source instanceof HTMLImageElement)return source;
+    const image=new Image();if(typeof source==='string'&&source)image.src=source;return image;
+  })();
   function draw(){
     const c=$('sw-arena'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
     for(let i=0;i<55;i++){ctx.fillStyle='#ffffff22';ctx.fillRect((i*173)%w,(i*71)%h,2,2)}
     const px=state.x*w,py=state.y*h,ex=state.ex*w,ey=state.ey*h;
-    const fighterImage=(()=>{
-      const domImage=document.getElementById('playerImg');
-      const source=(domImage&&(domImage.currentSrc||domImage.src))||(typeof playerImg!=='undefined'&&playerImg&&(playerImg.currentSrc||playerImg.src||playerImg))||(typeof ASSETS!=='undefined'&&ASSETS.player)||'';
-      if(source instanceof HTMLImageElement)return source;
-      const image=new Image();if(typeof source==='string'&&source)image.src=source;return image;
-    })();
     function fighter(x,y,color,label){
       ctx.save();ctx.shadowColor=color;ctx.shadowBlur=16;ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(x,y,31,0,Math.PI*2);ctx.fill();
       ctx.shadowBlur=0;ctx.save();ctx.beginPath();ctx.arc(x,y,26,0,Math.PI*2);ctx.clip();
