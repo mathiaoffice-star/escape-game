@@ -155,8 +155,8 @@
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
     for(let i=0;i<55;i++){ctx.fillStyle='#ffffff22';ctx.fillRect((i*173)%w,(i*71)%h,2,2)}
     const px=state.x*w,py=state.y*h,ex=state.ex*w,ey=state.ey*h;
-    function fighter(x,y,color){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y-12,17,0,Math.PI*2);ctx.fill();ctx.fillRect(x-13,y,26,30);ctx.fillStyle='#fff';ctx.fillRect(x-7,y-15,4,4);ctx.fillRect(x+4,y-15,4,4)}
-    fighter(px,py,'#a78bfa');fighter(ex,ey,'#fb7185');
+    function fighter(x,y,color,frame,label){ctx.save();ctx.shadowColor=color;ctx.shadowBlur=14;ctx.strokeStyle=color;ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(x-23,y-39,46,76,20);ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y-12,17,0,Math.PI*2);ctx.fill();ctx.fillRect(x-13,y,26,30);ctx.fillStyle='#fff';ctx.fillRect(x-7,y-15,4,4);ctx.fillRect(x+4,y-15,4,4);ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0f172a';ctx.strokeText(label,x,y-52);ctx.fillStyle='#fff';ctx.fillText(label,x,y-52);ctx.restore()}
+    fighter(px,py,'#38bdf8',true,'YOU');fighter(ex,ey,'#fb7185',false,state.opponent==='CPU'?'CPU':'RIVAL');
     function orb(x,y,beam){ctx.save();if(beam){ctx.shadowColor='#fff7d6';ctx.shadowBlur=18;ctx.fillStyle='#fff9df';ctx.fillRect(x-4,y-5,35,10);ctx.fillStyle='#f5e6a7';ctx.fillRect(x,y-2,35,4)}else{ctx.shadowColor='#fff8d9';ctx.shadowBlur=12;ctx.fillStyle='#fff5cf';ctx.beginPath();ctx.ellipse(x,y,12,8,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-3,y-3,3,0,Math.PI*2);ctx.fill()}ctx.restore()}
     state.shots.forEach(s=>orb(s.x*w,s.y*h,s.beam));state.enemyShots.forEach(s=>orb(s.x*w,s.y*h,false));
   }
