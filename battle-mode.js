@@ -6,14 +6,17 @@
   const SUPABASE_URL = 'https://caittxvisaqpcrurqgag.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_VBhQe8t5WtKR39XluwRZJg_sKrbieI7';
   const STORE = 'shamarupiWarV1';
-  const state = { mode:'idle', user:null, lobby:null, room:null, opponent:null, started:0, hp:100, enemyHp:100, x:0.18, y:0.5, ex:0.82, ey:0.5, shots:[], enemyShots:[], keys:{}, lastShot:0, lastSync:0, raf:0, wins:0, rating:1000, weapon:'orb', ended:false, cpuAt:0, roomId:null };
+  const state = { mode:'idle', user:null, lobby:null, room:null, opponent:null, started:0, hp:150, enemyHp:150, maxHp:150, x:0.18, y:0.5, ex:0.82, ey:0.5, shots:[], enemyShots:[], keys:{}, lastShot:0, lastSync:0, raf:0, wins:0, rating:1000, weapon:'orb', orbLevel:0, beamUnlocked:false, beamLevel:0, ended:false, cpuAt:0, roomId:null };
   const saved = (()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(e){return {}}})();
   state.wins = Number(saved.wins)||0;
-  state.weapon = saved.weapon==='beam' && state.wins>=3 ? 'beam':'orb';
-  function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon}))}catch(e){}}
+  state.orbLevel = Math.max(0,Math.min(5,Number(saved.orbLevel)||0));
+  state.beamUnlocked = !!saved.beamUnlocked || saved.weapon==='beam';
+  state.beamLevel = Math.max(0,Math.min(5,Number(saved.beamLevel)||0));
+  state.weapon = saved.weapon==='beam' && state.beamUnlocked ? 'beam':'orb';
+  function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon,orbLevel:state.orbLevel,beamUnlocked:state.beamUnlocked,beamLevel:state.beamLevel}))}catch(e){}}
   const style = document.createElement('style');
   style.textContent = `
-  #shamarupi-entry{position:fixed;z-index:99990;right:14px;bottom:18px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005}
+  #shamarupi-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005;vertical-align:middle;cursor:pointer}
   #shamarupi-modal{position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at 50% 0,#263c62,#080d19 72%);color:#fff;font-family:system-ui,sans-serif;display:none;overflow:auto;padding:16px;box-sizing:border-box}
   #shamarupi-modal *{box-sizing:border-box}#shamarupi-modal .sw-wrap{max-width:760px;margin:0 auto}
   #shamarupi-modal h2{text-align:center;font-size:clamp(26px,6vw,42px);margin:12px 0 4px;color:#f5eaff;text-shadow:0 3px 18px #c026d366}
@@ -23,60 +26,164 @@
   #shamarupi-modal .sw-panel{background:#ffffff12;border:1px solid #ffffff24;border-radius:18px;padding:16px;margin:12px 0}
   #shamarupi-modal .sw-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
   #shamarupi-modal #sw-arena{width:100%;height:min(56vh,440px);min-height:260px;background:linear-gradient(#111827,#172554);border:2px solid #64748b;border-radius:16px;display:block;touch-action:none}
-  #shamarupi-modal .sw-hud{display:flex;justify-content:space-between;gap:10px;font-weight:900;margin:10px 0}
-  #shamarupi-modal .sw-controls{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
-  #shamarupi-modal .sw-controls button{min-width:44%;min-height:56px;background:#475569;touch-action:none}
+  #shamarupi-modal .sw-hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;margin:10px 0}
+  #shamarupi-modal .sw-hp{height:34px;position:relative;border:2px solid #94a3b8;border-radius:9px;overflow:hidden;background:#111827;min-width:0}
+  #shamarupi-modal .sw-hp-fill{height:100%;width:100%;transition:width .12s linear}
+  #shamarupi-modal .sw-hp.you .sw-hp-fill{background:linear-gradient(90deg,#2563eb,#38bdf8)}
+  #shamarupi-modal .sw-hp.enemy .sw-hp-fill{background:linear-gradient(90deg,#ef4444,#fb7185)}
+  #shamarupi-modal .sw-hp-number{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:14px;font-weight:1000;text-shadow:0 1px 3px #000,0 0 4px #000}
+  #shamarupi-modal .sw-hud-label{font-size:11px;text-align:center;font-weight:900;margin-bottom:3px}
+  #shamarupi-modal .sw-hud-center{font-size:13px;font-weight:900;text-align:center;white-space:nowrap}
+  #shamarupi-modal .sw-controls{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:14px;padding:4px 8px}
+  #shamarupi-modal .sw-joystick{width:142px;height:142px;flex:0 0 142px;border-radius:50%;position:relative;touch-action:none;user-select:none;background:radial-gradient(circle,#475569 0 48%,#334155 50% 68%,#1e293b 70%);border:2px solid #94a3b8;box-shadow:inset 0 4px 14px #0006,0 5px 14px #0004}
+  #shamarupi-modal .sw-joystick:before{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;border-radius:50%;background:#cbd5e1;transform:translate(-50%,-50%)}
+  #shamarupi-modal .sw-joystick-knob{position:absolute;left:50%;top:50%;width:62px;height:62px;border-radius:50%;transform:translate(-50%,-50%);background:linear-gradient(145deg,#e2e8f0,#64748b);border:2px solid #f8fafc;box-shadow:0 4px 12px #0008;pointer-events:none}
+  @media(max-width:390px){#shamarupi-modal .sw-joystick{width:116px;height:116px;flex-basis:116px}#shamarupi-modal .sw-joystick-knob{width:50px;height:50px}}
+  #shamarupi-modal #sw-fire{min-width:112px;min-height:78px;flex:0 0 112px;border-radius:22px;background:linear-gradient(145deg,#7c3aed,#5b21b6);font-size:18px;touch-action:none;user-select:none}
+  @media(max-width:390px){#shamarupi-modal .sw-joystick{width:122px;height:122px;flex-basis:122px}#shamarupi-modal .sw-joystick-knob{width:54px;height:54px}#shamarupi-modal #sw-fire{min-width:96px;flex-basis:96px}}
   #shamarupi-modal .sw-small{font-size:12px;color:#cbd5e1;text-align:center}
   #shamarupi-modal .sw-shop{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  #shamarupi-modal .sw-items{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 16px}
+  #shamarupi-modal .sw-item-card{display:flex;gap:10px;align-items:center;min-width:0;padding:10px;border-radius:15px;background:#ffffff12;border:1px solid #ffffff25}
+  #shamarupi-modal .sw-item-art{width:88px;height:88px;flex:0 0 88px;border-radius:15px;background:#f8fafc;display:grid;place-items:center;overflow:hidden;position:relative}
+  #shamarupi-modal .sw-orb-art span{width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 32% 25%,#fff 0 10%,#f5f5f5 25%,#d6d6d6 67%,#a3a3a3 100%);box-shadow:inset -5px -7px 10px #5553,inset 3px 3px 8px #fff,0 3px 8px #0003}
+  #shamarupi-modal .sw-beam-art{background:#171717}
+  #shamarupi-modal .sw-beam-art:before{content:"";position:absolute;left:0;top:50%;width:100%;height:3px;background:linear-gradient(90deg,#fff,#e5e5e5,#fff);box-shadow:0 0 9px 3px #fff}
+  #shamarupi-modal .sw-beam-art span{position:absolute;left:13px;top:calc(50% - 9px);width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 0 10px 6px #fff}
+  #shamarupi-modal .sw-item-copy{min-width:0}
+  #shamarupi-modal .sw-item-copy b{display:block;font-size:14px}
+  #shamarupi-modal .sw-item-copy small{display:inline-block;margin:4px 0;padding:3px 7px;border-radius:99px;background:#e5e7eb;color:#334155;font-size:10px;font-weight:800}
+  #shamarupi-modal .sw-item-copy p{margin:2px 0 8px;font-size:11px;line-height:1.5;color:#e2e8f0}
+  #shamarupi-modal .sw-item-copy button{font-size:11px;padding:7px 10px;margin-top:4px;background:#475569}
+  #shamarupi-modal .sw-item-copy button:disabled{opacity:.45}
+  #shamarupi-modal .sw-orb-art span{transition:width .2s,height .2s}
+  #shamarupi-modal .sw-beam-art span{height:calc(5px + var(--beam-level,0)*3px);box-shadow:0 0 10px 5px #fff}
+  #shamarupi-modal .sw-balance{font-size:13px;color:#f8fafc;background:#ffffff16;border-radius:10px;padding:8px 12px}
+  @media(max-width:560px){#shamarupi-modal .sw-items{grid-template-columns:1fr}#shamarupi-modal .sw-item-art{width:76px;height:76px;flex-basis:76px}}
+
   @media(min-width:700px){#shamarupi-modal .sw-controls{max-width:500px;margin:10px auto}}
   `;
   document.head.appendChild(style);
-  const entry=document.createElement('button');entry.id='shamarupi-entry';entry.textContent='⚔ シャマルピー戦争';
+  const entry=document.createElement('button');entry.id='shamarupi-entry';entry.type='button';entry.textContent='⚔ 対戦モード';
   const modal=document.createElement('div');modal.id='shamarupi-modal';
   modal.innerHTML=`<div class="sw-wrap">
     <div class="sw-actions"><button class="secondary" id="sw-close">タイトルへ戻る</button></div>
     <h2>シャマルピー戦争</h2><p class="sw-sub">1対1オンラインバトル ／ 相手がいなければ15秒でCPU戦</p>
     <section id="sw-home" class="sw-panel">
-      <p style="text-align:center">レート：<b id="sw-rating">1000</b> RP　|　勝利数：<b id="sw-wins">0</b>　|　装備：<b id="sw-equipped">イエローボール</b></p>
+      <p style="text-align:center">レート：<b id="sw-rating">1000</b> RP　|　勝利数：<b id="sw-wins">0</b>　|　装備：<b id="sw-equipped">白濁ボール</b></p>
+      <div class="sw-items" aria-label="攻撃アイテム">
+        <article class="sw-item-card">
+          <div class="sw-item-art sw-orb-art"><span id="sw-orb-preview"></span></div>
+          <div class="sw-item-copy"><b>① 白濁ボール</b><small id="sw-orb-level">サイズ Lv.1 / 6</small><p>金玉で5段階強化。大きくなるほど当たりやすく、威力も上昇。</p><button id="sw-orb-upgrade" type="button">強化する</button></div>
+        </article>
+        <article class="sw-item-card">
+          <div class="sw-item-art sw-beam-art"><span id="sw-beam-preview"></span></div>
+          <div class="sw-item-copy"><b>② 白濁ビーム</b><small id="sw-beam-level">未解放</small><p>300金玉で解放。さらに5段階、ビームを太くして威力を強化。</p><button id="sw-beam-upgrade" type="button">300金玉で解放</button></div>
+        </article>
+      </div>
       <div class="sw-shop">
-        <div><b>攻撃ショップ</b><div class="sw-small">白濁したコミカルなエネルギー弾・ビーム</div></div>
-        <button id="sw-beam-buy">ビーム解放（3勝）</button>
+        <div><b>攻撃ショップ</b><div class="sw-small">強化は各武器5段階。装備を切り替えて対戦しよう。</div></div>
+        <div class="sw-balance">所持金玉：<b id="sw-coins">---</b></div>
       </div>
       <div class="sw-actions" style="margin-top:14px">
-        <button id="sw-equip-orb" class="secondary">イエローボールを装備</button>
-        <button id="sw-equip-beam" class="secondary">イエロービームを装備</button>
+        <button id="sw-equip-orb" class="secondary">白濁ボールを装備</button>
+        <button id="sw-equip-beam" class="secondary">白濁ビームを装備</button>
       </div>
-      <p class="sw-small">ビームは対戦で3勝すると解放。ゲーム本編のコインやショップには触れません。</p>
-      <div class="sw-actions"><button id="sw-match">オンライン対戦を開始</button></div>
+      <p class="sw-small">プレイヤーHPは150。武器強化で攻撃力・当たり判定が少しずつ上昇します。</p>
+      <div class="sw-actions"><button id="sw-match">ランダムオンライン対戦</button></div>
+      <div style="margin-top:18px;border-top:1px solid #ffffff24;padding-top:14px">
+        <b>友達と合言葉で対戦</b>
+        <p class="sw-small">部屋を作る人が合言葉を決めて、友達に共有します</p>
+        <input id="sw-friend-code" maxlength="20" autocomplete="off" placeholder="合言葉（2〜20文字）" style="width:100%;padding:13px;border-radius:10px;border:1px solid #64748b;background:#0f172a;color:white;font-size:16px;margin:8px 0">
+        <div class="sw-actions">
+          <button id="sw-friend-create">この合言葉で部屋を作る</button>
+          <button id="sw-friend-join" class="secondary">合言葉で参加する</button>
+        </div>
+        <div class="sw-actions" style="margin-top:8px"><button id="sw-friend-copy" class="secondary" disabled>合言葉をコピー</button></div>
+      </div>
       <p id="sw-status" style="text-align:center;min-height:24px">準備完了</p>
     </section>
     <section id="sw-game" class="sw-panel" hidden>
-      <div class="sw-hud"><span>YOU <b id="sw-myhp">100</b> HP</span><span><b id="sw-mode">CPU戦</b></span><span>相手 <b id="sw-enemyhp">100</b> HP</span></div>
+      <div class="sw-hud">
+        <div><div class="sw-hud-label">YOU</div><div class="sw-hp you"><div id="sw-myhp-fill" class="sw-hp-fill"></div><span id="sw-myhp" class="sw-hp-number">150 / 150</span></div></div>
+        <div id="sw-mode" class="sw-hud-center">CPU戦</div>
+        <div><div class="sw-hud-label">相手</div><div class="sw-hp enemy"><div id="sw-enemyhp-fill" class="sw-hp-fill"></div><span id="sw-enemyhp" class="sw-hp-number">150 / 150</span></div></div>
+      </div>
       <canvas id="sw-arena" width="900" height="500"></canvas>
-      <div class="sw-controls"><button id="sw-left">◀ 移動</button><button id="sw-fire">発射！</button><button id="sw-right">移動 ▶</button></div>
-      <p class="sw-small">PC：A/Dまたは←/→で移動、Spaceで攻撃。スマホ：移動・発射ボタンを長押し。</p>
+      <div class="sw-controls">
+        <div id="sw-stick-base" class="sw-joystick" role="application" aria-label="移動スティック"><div id="sw-stick-knob" class="sw-joystick-knob"></div></div>
+        <button id="sw-fire" type="button">発射！</button>
+      </div>
+      <p class="sw-small">スマホ：左スティックで上下左右に移動、発射ボタンを長押し。PC：A/D・←/→で左右、W/S・↑/↓で上下、Spaceで攻撃。</p>
+      <div class="sw-actions"><button id="sw-friend-copy-wait" class="secondary" disabled>合言葉をコピー</button></div>
       <div class="sw-actions"><button id="sw-leave" class="secondary">対戦を終了</button></div>
     </section>
     <section id="sw-result" class="sw-panel" hidden><h2 id="sw-result-title">勝利！</h2><p id="sw-result-text" style="text-align:center"></p><p id="sw-rating-result" style="text-align:center">レートを確認中…</p><div class="sw-actions"><button id="sw-again">もう一度対戦</button></div></section>
   </div>`;
-  document.body.append(entry,modal);
+  document.body.append(modal);
+  function placeBattleEntry(){
+    if(entry.isConnected)return true;
+    const candidates=[...document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]')];
+    const start=candidates.find(el=>/ゲームスタート|ゲーム開始|スタート/.test((el.innerText||el.value||'').replace(/\\s/g,'')));
+    if(start){start.insertAdjacentElement('afterend',entry);return true;}
+    return false;
+  }
+  if(!placeBattleEntry()){
+    const observer=new MutationObserver(()=>{if(placeBattleEntry())observer.disconnect();});
+    observer.observe(document.body,{childList:true,subtree:true});
+    setTimeout(()=>observer.disconnect(),15000);
+  }
   const $=id=>document.getElementById(id);
-  function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'イエロービーム':'イエローボール';$('sw-beam-buy').textContent=state.wins>=3?'ビーム解放済み':'ビーム解放（3勝）';$('sw-beam-buy').disabled=state.wins<3;}
+  function coinBalance(){try{return typeof window.getAvailableGameCoins==='function'?window.getAvailableGameCoins():(typeof wallet!=='undefined'?Math.max(0,Number(wallet)||0):0)}catch(e){return 0}}
+  const orbCosts=[100,180,280,420,600], beamCosts=[150,250,400,600,850];
+  function refreshShop(){
+    $('sw-coins').textContent=coinBalance().toLocaleString('ja-JP');
+    $('sw-orb-level').textContent='サイズ Lv.'+(state.orbLevel+1)+' / 6';
+    $('sw-orb-preview').style.width=(42+state.orbLevel*7)+'px';$('sw-orb-preview').style.height=(42+state.orbLevel*7)+'px';
+    $('sw-orb-upgrade').textContent=state.orbLevel>=5?'最大サイズ！':(orbCosts[state.orbLevel]+'金玉でサイズUP');
+    $('sw-orb-upgrade').disabled=state.orbLevel>=5;
+    $('sw-beam-level').textContent=!state.beamUnlocked?'未解放':('太さ Lv.'+(state.beamLevel+1)+' / 6');
+    $('sw-beam-preview').style.setProperty('--beam-level',state.beamLevel);
+    $('sw-beam-upgrade').textContent=!state.beamUnlocked?'300金玉で解放':(state.beamLevel>=5?'最大強化！':(beamCosts[state.beamLevel]+'金玉で太さUP'));
+    $('sw-beam-upgrade').disabled=state.beamUnlocked&&state.beamLevel>=5;
+    $('sw-equip-beam').disabled=!state.beamUnlocked;
+    $('sw-equip-orb').disabled=state.weapon==='orb';$('sw-equip-beam').disabled=!state.beamUnlocked||state.weapon==='beam';
+  }
+  function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
   function open(){modal.style.display='block';showHome();}
   function close(){stopGame();modal.style.display='none';}
   entry.onclick=open;$('sw-close').onclick=close;
   function status(t){$('sw-status').textContent=t;}
   function setInput(key,on){state.keys[key]=on;}
-  [['sw-left','left'],['sw-right','right'],['sw-fire','fire']].forEach(([id,k])=>{
-    const b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();setInput(k,true);b.setPointerCapture(e.pointerId)});
-    ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>setInput(k,false)));
-  });
+  const stick=$('sw-stick-base'),knob=$('sw-stick-knob');
+  function moveStick(e){
+    const rect=stick.getBoundingClientRect(),cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+    const max=rect.width*.29,dx=e.clientX-cx,dy=e.clientY-cy,dist=Math.hypot(dx,dy),scale=dist>max?max/dist:1;
+    const x=dx*scale,y=dy*scale;
+    knob.style.left='calc(50% + '+x+'px)';knob.style.top='calc(50% + '+y+'px)';
+    setInput('left',x < -10);setInput('right',x > 10);setInput('up',y < -10);setInput('down',y > 10);
+  }
+  function resetStick(){knob.style.left='50%';knob.style.top='50%';setInput('left',false);setInput('right',false);setInput('up',false);setInput('down',false);}
+  let activeStickPointer=null;
+  stick.addEventListener('pointerdown',e=>{e.preventDefault();activeStickPointer=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e)});
+  stick.addEventListener('pointermove',e=>{if(e.pointerId===activeStickPointer)moveStick(e)});
+  function releaseStick(e){if(activeStickPointer!==null&&e.pointerId!==undefined&&e.pointerId!==activeStickPointer)return;activeStickPointer=null;resetStick();}
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>stick.addEventListener(ev,releaseStick));
+  const fireButton=$('sw-fire');
+  fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireButton.setPointerCapture(e.pointerId);setInput('fire',true)});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>fireButton.addEventListener(ev,()=>setInput('fire',false)));
   window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight',' ','a','d','A','D'].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setInput('left',true);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setInput('right',true);if(e.key===' ')setInput('fire',true)}});
   window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setInput('left',false);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setInput('right',false);if(e.key===' ')setInput('fire',false)});
-  $('sw-beam-buy').onclick=()=>{if(state.wins>=3){status('ビームは解放済み！')}};
+  function chargeBattleCoins(cost,label,done){
+    if(typeof window.chargeGameCoins==='function'){window.chargeGameCoins(cost,label,()=>{done();refreshShop()});return;}
+    if(typeof wallet==='undefined'||coinBalance()<cost){status('金玉が足りません。'+cost+'金玉必要です。');return;}
+    wallet-=cost;if(typeof saveWallet==='function')saveWallet();if(typeof updateShopUI==='function')updateShopUI();done();refreshShop();
+  }
+  $('sw-orb-upgrade').onclick=()=>{if(state.orbLevel>=5)return;const cost=orbCosts[state.orbLevel];chargeBattleCoins(cost,'白濁ボール強化',()=>{state.orbLevel++;persist();status('白濁ボールが大きくなった！ Lv.'+(state.orbLevel+1));});};
+  $('sw-beam-upgrade').onclick=()=>{if(!state.beamUnlocked){chargeBattleCoins(300,'白濁ビーム解放',()=>{state.beamUnlocked=true;persist();status('白濁ビームを解放した！');});return;}if(state.beamLevel>=5)return;const cost=beamCosts[state.beamLevel];chargeBattleCoins(cost,'白濁ビーム強化',()=>{state.beamLevel++;persist();status('白濁ビームが太くなった！ Lv.'+(state.beamLevel+1));});};
   $('sw-equip-orb').onclick=()=>{state.weapon='orb';persist();showHome()};
-  $('sw-equip-beam').onclick=()=>{if(state.wins>=3){state.weapon='beam';persist();showHome()}else status('ビームは3勝で解放！')};
-  $('sw-match').onclick=startMatch;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
+  $('sw-equip-beam').onclick=()=>{if(state.beamUnlocked){state.weapon='beam';persist();showHome()}};
+  $('sw-match').onclick=startMatch;$('sw-friend-create').onclick=()=>joinFriendRoom('create');$('sw-friend-join').onclick=()=>joinFriendRoom('join');$('sw-friend-copy').onclick=copyFriendCode;$('sw-friend-copy-wait').onclick=copyFriendCode;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
   $('sw-leave').onclick=()=>{stopGame();showHome()};
   $('sw-arena').addEventListener('pointerdown',e=>{if(e.pointerType==='touch')setInput('fire',true)});
   $('sw-arena').addEventListener('pointerup',()=>setInput('fire',false));
@@ -88,8 +195,8 @@
     const {data:ratingRow}=await state.client.from('battle_ratings').select('rating').eq('user_id',state.user.id).maybeSingle();state.rating=ratingRow?.rating??1000;return state.client;
   }
   async function startMatch(){
-    stopGame();state.ended=false;state.hp=100;state.enemyHp=100;state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
-    $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;$('sw-myhp').textContent='100';$('sw-enemyhp').textContent='100';
+    stopGame();state.ended=false;state.hp=state.maxHp;state.enemyHp=state.maxHp;state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
+    $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;$('sw-myhp').textContent=state.maxHp;$('sw-enemyhp').textContent=state.maxHp;
     status('対戦相手を検索中…');$('sw-mode').textContent='検索中';
     try{
       const client=await getClient();const uid=state.user.id;
@@ -101,6 +208,56 @@
       state.searchPoll=poll;
     }catch(e){console.warn(e);status('オンライン接続に失敗。CPU戦を開始します');startCpu();}
   }
+  function friendTopic(code){
+    let h=2166136261;
+    for(let i=0;i<code.length;i++){h^=code.charCodeAt(i);h=Math.imul(h,16777619)}
+    return 'shamarupi-friend-'+(h>>>0).toString(36);
+  }
+  async function copyFriendCode(){
+    const code=String(state.friendCode||$('sw-friend-code').value||'').trim().toUpperCase();
+    if(!code)return;
+    try{
+      if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(code);
+      else{
+        const input=$('sw-friend-code');input.focus();input.select();
+        if(!document.execCommand('copy'))throw new Error('copy failed');
+      }
+      status('合言葉「'+code+'」をコピーしました！友達に送ってね');
+    }catch(e){status('コピーできませんでした。合言葉を長押ししてコピーしてね')}
+  }
+  async function joinFriendRoom(role){
+    const code=String($('sw-friend-code').value||'').trim().toUpperCase();
+    if(code.length<2||code.length>20){status('合言葉は2〜20文字で入力してください');return}
+    $('sw-friend-code').value=code;state.friendCode=code;
+    $('sw-friend-copy').disabled=role!=='create';$('sw-friend-copy-wait').disabled=role!=='create';
+    stopGame();state.ended=false;state.hp=state.maxHp;state.enemyHp=state.maxHp;state.shots=[];state.enemyShots=[];
+    $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;
+    $('sw-mode').textContent='友達対戦';status(role==='create'?'合言葉の部屋を作成中…':'合言葉の部屋に参加中…');
+    try{
+      const client=await getClient();
+      state.mode='friend-waiting';
+      state.friendChannel=client.channel(friendTopic(code),{config:{presence:{key:state.user.id}}});
+      state.friendChannel.on('presence',{event:'sync'},()=>{
+        if(state.mode!=='friend-waiting')return;
+        const members=Object.entries(state.friendChannel.presenceState()).flatMap(([key,arr])=>(arr||[]).map(v=>({uid:v.uid||key,joined:v.joined||0}))).filter(p=>p.uid);
+        const others=[...new Map(members.map(p=>[p.uid,p])).values()].filter(p=>p.uid!==state.user.id).sort((a,b)=>a.joined-b.joined);
+        if(others.length){status('友達が見つかった！対戦準備中…');startOnline(others[0].uid)}
+      });
+      state.friendChannel.subscribe(async s=>{
+        if(s==='SUBSCRIBED'&&state.mode==='friend-waiting'){
+          await state.friendChannel.track({uid:state.user.id,joined:Date.now(),role});
+          if(role==='create'){
+            $('sw-friend-copy').disabled=false;$('sw-friend-copy-wait').disabled=false;
+            status('部屋を作成しました！合言葉「'+code+'」をコピーして友達に送ってね');
+          }else{
+            status('合言葉の部屋に参加しました。部屋を作った友達が待っているよ！');
+          }
+        }else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){
+          status('部屋に接続できませんでした。もう一度お試しください');stopGame();showHome();
+        }
+      });
+    }catch(e){console.warn(e);status('接続に失敗しました：'+(e.message||'通信エラー'));stopGame();showHome()}
+  }
   function tryPair(){
     if(!state.lobby||state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
     const all=state.lobby.presenceState();const peers=Object.entries(all).flatMap(([key,arr])=>(arr||[]).map(v=>({uid:v.uid||key,joined:v.joined||0}))).filter(p=>p.uid);
@@ -108,24 +265,28 @@
     if(unique.length>=2){const pair=unique.slice(0,2);if(pair.some(p=>p.uid===state.user.id)){const other=pair.find(p=>p.uid!==state.user.id);if(other)startOnline(other.uid)}}
   }
   async function startOnline(otherUid){
-    if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
+    if(state.mode==='connecting'||state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
     state.mode='connecting';if(state.searchPoll)clearInterval(state.searchPoll);
-    state.opponent=otherUid;state.roomId=[state.user.id,otherUid].sort().join('_');state.direction=state.user.id.localeCompare(otherUid)<0?1:-1;state.x=state.direction===1?.18:.82;state.ex=state.direction===1?.82:.18;status('相手が見つかった！対戦準備中…');
+    state.opponent=otherUid;if(state.friendChannel){state.client.removeChannel(state.friendChannel);state.friendChannel=null}state.roomId=[state.user.id,otherUid].sort().join('_');state.direction=state.user.id.localeCompare(otherUid)<0?1:-1;state.x=state.direction===1?.18:.82;state.ex=state.direction===1?.82:.18;status('相手が見つかった！対戦準備中…');
     const roomId=state.roomId;
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
-    state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,100);}});
-    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*.018,life:100});});
+    state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,state.maxHp);}});
+    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
     state.room.on('broadcast',{event:'hit'},({payload})=>{if(payload?.uid!==state.user.id){state.hp=Math.max(0,state.hp-(payload.damage||8));updateHud();if(state.hp<=0)finish(false)}});
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
   function startCpu(){if(state.mode==='playing'||state.mode==='ended')return;state.mode='cpu';state.opponent='CPU';$('sw-mode').textContent='CPU戦';status('相手が見つからなかったためCPU戦を開始！');beginGame()}
   function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0))}
-  function updateHud(){$('sw-myhp').textContent=state.hp;$('sw-enemyhp').textContent=state.enemyHp}
+  function updateHud(){
+    $('sw-myhp').textContent=state.hp+' / '+state.maxHp;$('sw-enemyhp').textContent=state.enemyHp+' / '+state.maxHp;
+    $('sw-myhp-fill').style.width=(state.hp/state.maxHp*100)+'%';$('sw-enemyhp-fill').style.width=(state.enemyHp/state.maxHp*100)+'%';
+  }
   function beginGame(){state.started=Date.now();state.lastShot=0;state.lastSync=0;state.shots=[];state.enemyShots=[];state.raf=requestAnimationFrame(tick)}
   function shoot(){
-    const now=Date.now(),delay=state.weapon==='beam'?650:380;if(now-state.lastShot<delay)return;state.lastShot=now;
-    state.shots.push({x:state.x+state.direction*.045,y:state.y,vx:state.direction*.025,life:100,beam:state.weapon==='beam'});
-    if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x+state.direction*.045,y:state.y}});
+    const now=Date.now(),beam=state.weapon==='beam',level=beam?state.beamLevel:state.orbLevel,delay=beam?720:420;if(now-state.lastShot<delay)return;state.lastShot=now;
+    const damage=beam?16+level*2:12+level*2;
+    state.shots.push({x:state.x+state.direction*.045,y:state.y,vx:state.direction*(beam?.03:.025),life:100,beam,level,damage});
+    if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x+state.direction*.045,y:state.y,beam,level,damage}});
   }
   function finish(win){
     if(state.ended)return;state.ended=true;state.mode='ended';cancelAnimationFrame(state.raf);
@@ -154,15 +315,15 @@
       $('sw-rating-result').textContent+=' 現在 '+state.rating+' RP';
     }catch(e){console.warn('rating update:',e);$('sw-rating-result').textContent='レート更新に失敗しました。再ログイン後に確認してください。';}
   }
-  function cleanupChannels(){if(state.client&&state.room){state.client.removeChannel(state.room);state.room=null}if(state.client&&state.lobby){state.client.removeChannel(state.lobby);state.lobby=null}}
+  function cleanupChannels(){if(state.client&&state.room){state.client.removeChannel(state.room);state.room=null}if(state.client&&state.lobby){state.client.removeChannel(state.lobby);state.lobby=null}if(state.client&&state.friendChannel){state.client.removeChannel(state.friendChannel);state.friendChannel=null}}
   function stopGame(){if(state.raf)cancelAnimationFrame(state.raf);if(state.searchPoll)clearInterval(state.searchPoll);state.mode='idle';state.keys={};cleanupChannels()}
   function tick(){
     if(state.mode!=='playing'&&state.mode!=='cpu')return;
-    const dt=1/60;if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;state.x=clamp(state.x,.04,.88);
+    const dt=1/60;if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
     if(state.keys.fire)shoot();
     if(state.mode==='cpu'&&Math.random()<.025){state.enemyShots.push({x:state.ex-state.direction*.02,y:state.ey,vx:-state.direction*.014,life:100})}
-    state.shots.forEach(s=>{s.x+=s.vx;s.life--;if((state.direction===1?s.x>=state.ex-.035:s.x<=state.ex+.035)&&Math.abs(s.y-state.ey)<.11&&s.life>0){s.life=0;state.enemyHp=Math.max(0,state.enemyHp-(s.beam?22:12));if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.beam?22:12}})}});
-    state.enemyShots.forEach(s=>{s.x+=s.vx;s.life--;if((state.direction===1?s.x<=state.x+.035:s.x>=state.x-.035)&&Math.abs(s.y-state.y)<.11&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-8);/* incoming projectile damages only this client */}});
+    state.shots.forEach(s=>{s.x+=s.vx;s.life--;const reach=s.beam?.045+ s.level*.009:.035+s.level*.004;if((state.direction===1?s.x>=state.ex-reach:s.x<=state.ex+reach)&&Math.abs(s.y-state.ey)<(.11+s.level*.006)&&s.life>0){s.life=0;state.enemyHp=Math.max(0,state.enemyHp-s.damage);if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.damage}})}});
+    state.enemyShots.forEach(s=>{s.x+=s.vx;s.life--;const reach=s.beam?.045+s.level*.009:.035+s.level*.004;if((state.direction===1?s.x<=state.x+reach:s.x>=state.x-reach)&&Math.abs(s.y-state.y)<(.11+s.level*.006)&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-(s.damage||8));/* incoming projectile damages only this client */}});
     state.shots=state.shots.filter(s=>s.life>0&&s.x<1);state.enemyShots=state.enemyShots.filter(s=>s.life>0&&s.x>0);
     if(state.mode==='cpu'){state.ey=.5+Math.sin(Date.now()/900)*.22;if(state.enemyHp<=0){finish(true);return}}
     if(state.hp<=0){finish(false);return}
@@ -175,10 +336,17 @@
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
     for(let i=0;i<55;i++){ctx.fillStyle='#ffffff22';ctx.fillRect((i*173)%w,(i*71)%h,2,2)}
     const px=state.x*w,py=state.y*h,ex=state.ex*w,ey=state.ey*h;
-    function fighter(x,y,color,frame,label){ctx.save();ctx.shadowColor=color;ctx.shadowBlur=14;ctx.strokeStyle=color;ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(x-23,y-39,46,76,20);ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y-12,17,0,Math.PI*2);ctx.fill();ctx.fillRect(x-13,y,26,30);ctx.fillStyle='#fff';ctx.fillRect(x-7,y-15,4,4);ctx.fillRect(x+4,y-15,4,4);ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0f172a';ctx.strokeText(label,x,y-52);ctx.fillStyle='#fff';ctx.fillText(label,x,y-52);ctx.restore()}
-    fighter(px,py,'#38bdf8',true,'YOU');fighter(ex,ey,'#fb7185',false,state.opponent==='CPU'?'CPU':'RIVAL');
-    function orb(x,y,beam){ctx.save();if(beam){ctx.shadowColor='#fff7d6';ctx.shadowBlur=18;ctx.fillStyle='#fff9df';ctx.fillRect(x-4,y-5,35,10);ctx.fillStyle='#f5e6a7';ctx.fillRect(x,y-2,35,4)}else{ctx.shadowColor='#fff8d9';ctx.shadowBlur=12;ctx.fillStyle='#fff5cf';ctx.beginPath();ctx.ellipse(x,y,12,8,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-3,y-3,3,0,Math.PI*2);ctx.fill()}ctx.restore()}
-    state.shots.forEach(s=>orb(s.x*w,s.y*h,s.beam));state.enemyShots.forEach(s=>orb(s.x*w,s.y*h,false));
+    const fighterImage=document.getElementById('playerImg');
+    function fighter(x,y,color,label){
+      ctx.save();ctx.shadowColor=color;ctx.shadowBlur=16;ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(x,y,31,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;ctx.save();ctx.beginPath();ctx.arc(x,y,26,0,Math.PI*2);ctx.clip();
+      if(fighterImage&&fighterImage.complete&&fighterImage.naturalWidth){ctx.drawImage(fighterImage,x-25,y-25,50,50)}else{ctx.fillStyle='#64748b';ctx.fillRect(x-25,y-25,50,50);ctx.fillStyle='#fff';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('?',x,y+6)}
+      ctx.restore();ctx.lineWidth=7;ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=14;ctx.beginPath();ctx.arc(x,y,29,0,Math.PI*2);ctx.stroke();
+      ctx.shadowBlur=0;ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0f172a';ctx.strokeText(label,x,y-42);ctx.fillStyle='#fff';ctx.fillText(label,x,y-42);ctx.restore();
+    }
+    fighter(px,py,'#2563eb','YOU');fighter(ex,ey,'#ef4444',state.opponent==='CPU'?'CPU':'RIVAL');
+    function orb(s){const x=s.x*w,y=s.y*h,level=s.level||0;ctx.save();if(s.beam){const thick=5+level*3;ctx.shadowColor='#fff';ctx.shadowBlur=12+level*3;ctx.fillStyle='#fff';ctx.fillRect(x-4,y-thick/2,42+level*5,thick);ctx.fillStyle='#e5e7eb';ctx.fillRect(x,y-thick/4,42+level*5,Math.max(2,thick/2));}else{const radius=8+level*2.2;ctx.shadowColor='#fff';ctx.shadowBlur=10+level*2;ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(x,y,radius*1.35,radius,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-radius*.25,y-radius*.25,Math.max(2,radius*.25),0,Math.PI*2);ctx.fill()}ctx.restore()}
+    state.shots.forEach(orb);state.enemyShots.forEach(orb);
   }
   showHome();
   // Add a title label to the document shell without touching the original game logic.
