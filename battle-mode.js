@@ -6,7 +6,7 @@
   const SUPABASE_URL = 'https://caittxvisaqpcrurqgag.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_VBhQe8t5WtKR39XluwRZJg_sKrbieI7';
   const STORE = 'shamarupiWarV1';
-  const state = { mode:'idle', user:null, lobby:null, room:null, opponent:null, started:0, hp:100, enemyHp:100, x:0.18, y:0.5, ex:0.82, ey:0.5, shots:[], enemyShots:[], keys:{}, lastShot:0, lastSync:0, raf:0, wins:0, weapon:'orb', ended:false, cpuAt:0 };
+  const state = { mode:'idle', user:null, lobby:null, room:null, opponent:null, started:0, hp:100, enemyHp:100, x:0.18, y:0.5, ex:0.82, ey:0.5, shots:[], enemyShots:[], keys:{}, lastShot:0, lastSync:0, raf:0, wins:0, rating:1000, weapon:'orb', ended:false, cpuAt:0, roomId:null };
   const saved = (()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(e){return {}}})();
   state.wins = Number(saved.wins)||0;
   state.weapon = saved.weapon==='beam' && state.wins>=3 ? 'beam':'orb';
@@ -37,7 +37,7 @@
     <div class="sw-actions"><button class="secondary" id="sw-close">タイトルへ戻る</button></div>
     <h2>シャマルピー戦争</h2><p class="sw-sub">1対1オンラインバトル ／ 相手がいなければ15秒でCPU戦</p>
     <section id="sw-home" class="sw-panel">
-      <p style="text-align:center">勝利数：<b id="sw-wins">0</b>　|　装備：<b id="sw-equipped">イエローボール</b></p>
+      <p style="text-align:center">レート：<b id="sw-rating">1000</b> RP　|　勝利数：<b id="sw-wins">0</b>　|　装備：<b id="sw-equipped">イエローボール</b></p>
       <div class="sw-shop">
         <div><b>攻撃ショップ</b><div class="sw-small">白濁したコミカルなエネルギー弾・ビーム</div></div>
         <button id="sw-beam-buy">ビーム解放（3勝）</button>
@@ -57,11 +57,11 @@
       <p class="sw-small">PC：A/Dまたは←/→で移動、Spaceで攻撃。スマホ：移動・発射ボタンを長押し。</p>
       <div class="sw-actions"><button id="sw-leave" class="secondary">対戦を終了</button></div>
     </section>
-    <section id="sw-result" class="sw-panel" hidden><h2 id="sw-result-title">勝利！</h2><p id="sw-result-text" style="text-align:center"></p><div class="sw-actions"><button id="sw-again">もう一度対戦</button></div></section>
+    <section id="sw-result" class="sw-panel" hidden><h2 id="sw-result-title">勝利！</h2><p id="sw-result-text" style="text-align:center"></p><p id="sw-rating-result" style="text-align:center">レートを確認中…</p><div class="sw-actions"><button id="sw-again">もう一度対戦</button></div></section>
   </div>`;
   document.body.append(entry,modal);
   const $=id=>document.getElementById(id);
-  function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-equipped').textContent=state.weapon==='beam'?'イエロービーム':'イエローボール';$('sw-beam-buy').textContent=state.wins>=3?'ビーム解放済み':'ビーム解放（3勝）';$('sw-beam-buy').disabled=state.wins<3;}
+  function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'イエロービーム':'イエローボール';$('sw-beam-buy').textContent=state.wins>=3?'ビーム解放済み':'ビーム解放（3勝）';$('sw-beam-buy').disabled=state.wins<3;}
   function open(){modal.style.display='block';showHome();}
   function close(){stopGame();modal.style.display='none';}
   entry.onclick=open;$('sw-close').onclick=close;
@@ -85,7 +85,7 @@
     if(!state.client)state.client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
     const {data,error}=await state.client.auth.getSession();if(error)throw error;
     if(!data.session){const r=await state.client.auth.signInAnonymously();if(r.error)throw r.error;state.user=r.data.user}else state.user=data.session.user;
-    return state.client;
+    const {data:ratingRow}=await state.client.from('battle_ratings').select('rating').eq('user_id',state.user.id).maybeSingle();state.rating=ratingRow?.rating??1000;return state.client;
   }
   async function startMatch(){
     stopGame();state.ended=false;state.hp=100;state.enemyHp=100;state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
@@ -110,8 +110,8 @@
   async function startOnline(otherUid){
     if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;
     state.mode='connecting';if(state.searchPoll)clearInterval(state.searchPoll);
-    state.opponent=otherUid;state.direction=state.user.id.localeCompare(otherUid)<0?1:-1;state.x=state.direction===1?.18:.82;state.ex=state.direction===1?.82:.18;status('相手が見つかった！対戦準備中…');
-    const roomId=[state.user.id,otherUid].sort().join('_');
+    state.opponent=otherUid;state.roomId=[state.user.id,otherUid].sort().join('_');state.direction=state.user.id.localeCompare(otherUid)<0?1:-1;state.x=state.direction===1?.18:.82;state.ex=state.direction===1?.82:.18;status('相手が見つかった！対戦準備中…');
+    const roomId=state.roomId;
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,100);}});
     state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*.018,life:100});});
@@ -132,7 +132,27 @@
     if(win){state.wins++;persist()}
     $('sw-result-title').textContent=win?'勝利！':'敗北…';
     $('sw-result-text').textContent=(win?'相手を撃破した！':'今回は負けてしまった…')+'　通算勝利 '+state.wins+' 回';
-    $('sw-game').hidden=true;$('sw-result').hidden=false;cleanupChannels();
+    $('sw-rating-result').textContent=state.opponent==='CPU'?'CPU戦のためレート変動なし':'オンライン対戦の結果を送信中…';
+    $('sw-game').hidden=true;$('sw-result').hidden=false;
+    if(state.opponent && state.opponent!=='CPU') submitBattleResult(win);
+    cleanupChannels();
+  }
+  async function submitBattleResult(win){
+    try{
+      const {data:{session}}=await state.client.auth.getSession();
+      if(!session?.access_token)throw new Error('ログイン情報がありません');
+      const response=await fetch(SUPABASE_URL+'/functions/v1/battle-result',{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_KEY},
+        body:JSON.stringify({match_id:state.roomId,opponent_id:state.opponent,winner_id:win?state.user.id:state.opponent})
+      });
+      const result=await response.json();if(!response.ok)throw new Error(result.error||'結果送信に失敗');
+      if(result.result?.status==='rated')$('sw-rating-result').textContent='レート '+(win?'+30':'−30')+' RP！';
+      else if(result.result?.status==='waiting_for_opponent')$('sw-rating-result').textContent='相手の結果報告を待っています。確認後にレートが反映されます。';
+      else if(result.result?.status==='reports_disagree')$('sw-rating-result').textContent='勝敗報告が一致しません。レートは保留されました。';
+      else $('sw-rating-result').textContent='この対戦のレートは反映済みです。';
+      for(let i=0;i<8;i++){await new Promise(resolve=>setTimeout(resolve,1500));const {data:row}=await state.client.from('battle_ratings').select('rating').eq('user_id',state.user.id).maybeSingle();if(row?.rating!=null){state.rating=row.rating;$('sw-rating').textContent=state.rating;}}
+      $('sw-rating-result').textContent+=' 現在 '+state.rating+' RP';
+    }catch(e){console.warn('rating update:',e);$('sw-rating-result').textContent='レート更新に失敗しました。再ログイン後に確認してください。';}
   }
   function cleanupChannels(){if(state.client&&state.room){state.client.removeChannel(state.room);state.room=null}if(state.client&&state.lobby){state.client.removeChannel(state.lobby);state.lobby=null}}
   function stopGame(){if(state.raf)cancelAnimationFrame(state.raf);if(state.searchPoll)clearInterval(state.searchPoll);state.mode='idle';state.keys={};cleanupChannels()}
