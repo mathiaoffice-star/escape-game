@@ -195,7 +195,7 @@
     const {data:ratingRow}=await state.client.from('battle_ratings').select('rating').eq('user_id',state.user.id).maybeSingle();state.rating=ratingRow?.rating??1000;return state.client;
   }
   async function startMatch(){
-    stopGame();const token=state.matchToken=(state.matchToken||0)+1;
+    startBattleAudio();stopGame();const token=state.matchToken=(state.matchToken||0)+1;
     state.ended=false;state.mode='connecting';state.hp=state.maxHp;state.enemyHp=state.maxHp;state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
     $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;updateHud();
     status('対戦相手を検索中…');$('sw-mode').textContent='検索中';
@@ -231,7 +231,7 @@
     }catch(e){status('コピーできませんでした。合言葉を長押ししてコピーしてね')}
   }
   async function joinFriendRoom(role){
-    const code=String($('sw-friend-code').value||'').trim().toUpperCase();
+    startBattleAudio();const code=String($('sw-friend-code').value||'').trim().toUpperCase();
     if(code.length<2||code.length>20){status('合言葉は2〜20文字で入力してください');return}
     $('sw-friend-code').value=code;state.friendCode=code;
     $('sw-friend-copy').disabled=role!=='create';$('sw-friend-copy-wait').disabled=role!=='create';
@@ -281,16 +281,49 @@
     // Opponent damage is delivered through the dedicated damage broadcast.
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
-  function startCpu(){if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;if(state.searchPoll){clearInterval(state.searchPoll);state.searchPoll=null}state.mode='cpu';state.opponent='CPU';state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.hp=state.maxHp;state.enemyHp=state.maxHp;state.shots=[];state.enemyShots=[];$('sw-mode').textContent='CPU戦';updateHud();status('CPU戦開始！');beginGame()}
+  function startCpu(){if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;startBattleAudio();if(state.searchPoll){clearInterval(state.searchPoll);state.searchPoll=null}state.mode='cpu';state.opponent='CPU';state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.hp=state.maxHp;state.enemyHp=state.maxHp;state.shots=[];state.enemyShots=[];$('sw-mode').textContent='CPU戦';updateHud();status('CPU戦開始！');beginGame()}
   function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0))}
   function updateHud(){
     $('sw-myhp').textContent=state.hp+' / '+state.maxHp;$('sw-enemyhp').textContent=state.enemyHp+' / '+state.maxHp;
     $('sw-myhp-fill').style.width=(state.hp/state.maxHp*100)+'%';$('sw-enemyhp-fill').style.width=(state.enemyHp/state.maxHp*100)+'%';
   }
+  let battleAudio=null,bgmOscillators=[],bgmTimer=null,bgmStep=0;
+  function startBattleAudio(){
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+      if(!battleAudio)battleAudio=new AC();
+      if(battleAudio.state==='suspended')battleAudio.resume().catch(()=>{});
+      if(!bgmOscillators.length){
+        const master=battleAudio.createGain();master.gain.value=.035;master.connect(battleAudio.destination);
+        [110,164.81].forEach((hz,index)=>{const osc=battleAudio.createOscillator(),gain=battleAudio.createGain();osc.type=index?'triangle':'sine';osc.frequency.value=hz;gain.gain.value=index?.22:.45;osc.connect(gain);gain.connect(master);osc.start();bgmOscillators.push(osc)});
+        const notes=[220,261.63,293.66,261.63,196,220,246.94,220];
+        bgmTimer=setInterval(()=>{if(!battleAudio||battleAudio.state!=='running')return;const t=battleAudio.currentTime;bgmOscillators[0].frequency.setTargetAtTime(notes[bgmStep++%notes.length]/2,t,.12);},420);
+      }
+    }catch(e){console.warn('battle audio unavailable',e)}
+  }
+  function playAttackAudio(){
+    startBattleAudio();
+    try{
+      if(battleAudio&&battleAudio.state==='running'){
+        const t=battleAudio.currentTime,o=battleAudio.createOscillator(),g=battleAudio.createGain();
+        o.type='sawtooth';o.frequency.setValueAtTime(620,t);o.frequency.exponentialRampToValueAtTime(170,t+.16);
+        g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);o.connect(g);g.connect(battleAudio.destination);o.start(t);o.stop(t+.19);
+      }
+      if('speechSynthesis'in window&&(!window.speechSynthesis.speaking)){
+        const u=new SpeechSynthesisUtterance('攻撃！');u.lang='ja-JP';u.rate=1.25;u.volume=.8;window.speechSynthesis.speak(u);
+      }
+    }catch(e){}
+  }
+  function segmentHitsPoint(x1,y1,x2,y2,px,py,r){
+    const dx=x2-x1,dy=y2-y1,len=dx*dx+dy*dy;
+    const t=len?clamp(((px-x1)*dx+(py-y1)*dy)/len,0,1):0;
+    const ex=x1+t*dx-px,ey=y1+t*dy-py;return ex*ex+ey*ey<=r*r;
+  }
   function beginGame(){if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;state.started=Date.now();state.lastShot=0;state.lastSync=0;state.cpuLastShot=Date.now();state.shots=[];state.enemyShots=[];updateHud();state.raf=requestAnimationFrame(tick)}
   function shoot(){
     const now=Date.now(),beam=state.weapon==='beam',level=beam?state.beamLevel:state.orbLevel,delay=beam?720:420;if(now-state.lastShot<delay)return;state.lastShot=now;
     const damage=beam?16+level*2:12+level*2;
+    playAttackAudio();
     state.shots.push({x:state.x+state.direction*.045,y:state.y,vx:state.direction*(beam?.03:.025),life:100,beam,level,damage});
     if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x+state.direction*.045,y:state.y,beam,level,damage}});
   }
@@ -325,37 +358,39 @@
   function stopGame(){state.matchToken=(state.matchToken||0)+1;if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;if(state.searchPoll)clearInterval(state.searchPoll);state.searchPoll=null;state.mode='idle';state.keys={};resetStick();setInput('fire',false);cleanupChannels()}
   function tick(){
     if(state.mode!=='playing'&&state.mode!=='cpu')return;
-    const dt=1/60;const nowFrame=()=>Date.now();if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
+    if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;
+    state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
     if(state.keys.fire)shoot();
-    if(state.mode==='cpu'&&nowFrame()-state.cpuLastShot>650){state.cpuLastShot=nowFrame();state.enemyShots.push({x:state.ex-state.direction*.035,y:state.y,vx:-state.direction*.022,life:160,damage:15,targeted:true})}
+    if(state.mode==='cpu'&&Date.now()-state.cpuLastShot>900){
+      state.cpuLastShot=Date.now();
+      const dx=state.x-state.ex,dy=state.y-state.ey,len=Math.hypot(dx,dy)||1,speed=.024;
+      state.enemyShots.push({x:state.ex,y:state.ey,vx:dx/len*speed,vy:dy/len*speed,life:100,damage:18,targeted:true});
+    }
     for(let i=state.shots.length-1;i>=0;i--){
-      const s=state.shots[i],previousX=s.x;s.x+=s.vx;s.life--;
-      const reach=s.beam?.045+s.level*.009:.035+s.level*.004;
-      const crossed=state.direction===1?(previousX<=state.ex+reach&&s.x>=state.ex-reach):(previousX>=state.ex-reach&&s.x<=state.ex+reach);
-      if(crossed&&Math.abs(s.y-state.ey)<(.11+s.level*.006)&&s.life>0){
+      const s=state.shots[i],x0=s.x,y0=s.y;s.x+=s.vx;s.y+=(s.vy||0);s.life--;
+      const radius=s.beam?.075:.065;
+      if(segmentHitsPoint(x0,y0,s.x,s.y,state.ex,state.ey,radius)&&s.life>0){
         state.shots.splice(i,1);
-        const damage=clamp(s.damage||12,1,40);state.enemyHp=Math.max(0,state.enemyHp-damage);
+        const damage=clamp(s.damage||12,1,40);state.enemyHp=Math.max(0,state.enemyHp-damage);updateHud();
         if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'damage',payload:{uid:state.user.id,target:state.opponent,damage}});
+        status('命中！ −'+damage+' HP');
         continue;
       }
-      if(s.life<=0||s.x<0||s.x>1)state.shots.splice(i,1);
+      if(s.life<=0||s.x<0||s.x>1||s.y<0||s.y>1)state.shots.splice(i,1);
     }
     for(let i=state.enemyShots.length-1;i>=0;i--){
-      const s=state.enemyShots[i],previousX=s.x;s.x+=s.vx;s.life--;
-      const reach=s.beam?.085+s.level*.009:.075+s.level*.004;
-      const crossed=Math.max(previousX,s.x)>=state.x-reach&&Math.min(previousX,s.x)<=state.x+reach;
-      const verticalReach=s.targeted?.30:(.22+s.level*.006);
-      if(crossed&&Math.abs(s.y-state.y)<verticalReach&&s.life>0){
+      const s=state.enemyShots[i],x0=s.x,y0=s.y;s.x+=s.vx;s.y+=(s.vy||0);s.life--;
+      if(segmentHitsPoint(x0,y0,s.x,s.y,state.x,state.y,.075)&&s.life>0){
         state.enemyShots.splice(i,1);
         if(state.mode==='cpu'){
-          const damage=s.damage||8;state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');
+          const damage=clamp(s.damage||18,1,40);state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');
           if(state.hp<=0){finish(false);return}
         }
         continue;
       }
-      if(s.life<=0||s.x<0||s.x>1)state.enemyShots.splice(i,1);
+      if(s.life<=0||s.x<0||s.x>1||s.y<0||s.y>1)state.enemyShots.splice(i,1);
     }
-    if(state.mode==='cpu'){state.ey=.5+Math.sin(Date.now()/900)*.22;if(state.enemyHp<=0){finish(true);return}}
+    if(state.mode==='cpu'){state.ey=.5+Math.sin(Date.now()/1100)*.12;if(state.enemyHp<=0){finish(true);return}}
     if(state.hp<=0){finish(false);return}
     const now=Date.now();if(state.mode==='playing'&&state.room&&now-state.lastSync>90){state.lastSync=now;state.room.send({type:'broadcast',event:'state',payload:{uid:state.user.id,x:state.x,y:state.y,hp:state.hp}})}
     if(state.mode==='playing'&&state.enemyHp<=0){finish(true);return}
