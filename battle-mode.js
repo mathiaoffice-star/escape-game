@@ -28,6 +28,19 @@
   #shamarupi-modal .sw-controls button{min-width:44%;min-height:56px;background:#475569;touch-action:none}
   #shamarupi-modal .sw-small{font-size:12px;color:#cbd5e1;text-align:center}
   #shamarupi-modal .sw-shop{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  #shamarupi-modal .sw-items{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 16px}
+  #shamarupi-modal .sw-item-card{display:flex;gap:10px;align-items:center;min-width:0;padding:10px;border-radius:15px;background:#ffffff12;border:1px solid #ffffff25}
+  #shamarupi-modal .sw-item-art{width:88px;height:88px;flex:0 0 88px;border-radius:15px;background:#f8fafc;display:grid;place-items:center;overflow:hidden;position:relative}
+  #shamarupi-modal .sw-orb-art span{width:58px;height:58px;border-radius:50%;background:radial-gradient(circle at 32% 25%,#fff 0 10%,#f5f5f5 25%,#d6d6d6 67%,#a3a3a3 100%);box-shadow:inset -5px -7px 10px #5553,inset 3px 3px 8px #fff,0 3px 8px #0003}
+  #shamarupi-modal .sw-beam-art{background:#171717}
+  #shamarupi-modal .sw-beam-art:before{content:"";position:absolute;left:0;top:50%;width:100%;height:3px;background:linear-gradient(90deg,#fff,#e5e5e5,#fff);box-shadow:0 0 9px 3px #fff}
+  #shamarupi-modal .sw-beam-art span{position:absolute;left:13px;top:calc(50% - 9px);width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 0 10px 6px #fff}
+  #shamarupi-modal .sw-item-copy{min-width:0}
+  #shamarupi-modal .sw-item-copy b{display:block;font-size:14px}
+  #shamarupi-modal .sw-item-copy small{display:inline-block;margin:4px 0;padding:3px 7px;border-radius:99px;background:#e5e7eb;color:#334155;font-size:10px;font-weight:800}
+  #shamarupi-modal .sw-item-copy p{margin:2px 0 0;font-size:11px;line-height:1.5;color:#e2e8f0}
+  @media(max-width:560px){#shamarupi-modal .sw-items{grid-template-columns:1fr}#shamarupi-modal .sw-item-art{width:76px;height:76px;flex-basis:76px}}
+
   @media(min-width:700px){#shamarupi-modal .sw-controls{max-width:500px;margin:10px auto}}
   `;
   document.head.appendChild(style);
@@ -37,14 +50,24 @@
     <div class="sw-actions"><button class="secondary" id="sw-close">タイトルへ戻る</button></div>
     <h2>シャマルピー戦争</h2><p class="sw-sub">1対1オンラインバトル ／ 相手がいなければ15秒でCPU戦</p>
     <section id="sw-home" class="sw-panel">
-      <p style="text-align:center">レート：<b id="sw-rating">1000</b> RP　|　勝利数：<b id="sw-wins">0</b>　|　装備：<b id="sw-equipped">イエローボール</b></p>
+      <p style="text-align:center">レート：<b id="sw-rating">1000</b> RP　|　勝利数：<b id="sw-wins">0</b>　|　装備：<b id="sw-equipped">白濁ボール</b></p>
+      <div class="sw-items" aria-label="攻撃アイテム">
+        <article class="sw-item-card">
+          <div class="sw-item-art sw-orb-art"><span></span></div>
+          <div class="sw-item-copy"><b>① 白濁ボール</b><small>基本攻撃候補</small><p>白く濁ったぷにぷにの玉を連射。コミカルに弾んで飛び散るエフェクト。</p></div>
+        </article>
+        <article class="sw-item-card">
+          <div class="sw-item-art sw-beam-art"><span></span></div>
+          <div class="sw-item-copy"><b>② 白濁ビーム</b><small>ショップ・3勝で解放</small><p>前方に白濁した光線を発射。光が伸び、命中時に派手なエフェクト。</p></div>
+        </article>
+      </div>
       <div class="sw-shop">
-        <div><b>攻撃ショップ</b><div class="sw-small">白濁したコミカルなエネルギー弾・ビーム</div></div>
+        <div><b>攻撃ショップ</b><div class="sw-small">ぷにっとした白濁ボールと白濁ビーム</div></div>
         <button id="sw-beam-buy">ビーム解放（3勝）</button>
       </div>
       <div class="sw-actions" style="margin-top:14px">
         <button id="sw-equip-orb" class="secondary">イエローボールを装備</button>
-        <button id="sw-equip-beam" class="secondary">イエロービームを装備</button>
+        <button id="sw-equip-beam" class="secondary">白濁ビームを装備</button>
       </div>
       <p class="sw-small">ビームは対戦で3勝すると解放。ゲーム本編のコインやショップには触れません。</p>
       <div class="sw-actions"><button id="sw-match">ランダムオンライン対戦</button></div>
