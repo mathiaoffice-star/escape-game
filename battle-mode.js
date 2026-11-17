@@ -172,8 +172,8 @@
   const fireButton=$('sw-fire');
   fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireButton.setPointerCapture(e.pointerId);setInput('fire',true)});
   ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>fireButton.addEventListener(ev,()=>setInput('fire',false)));
-  window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight',' ','a','d','A','D'].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setInput('left',true);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setInput('right',true);if(e.key===' ')setInput('fire',true)}});
-  window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setInput('left',false);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setInput('right',false);if(e.key===' ')setInput('fire',false)});
+  window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','a','d','A','D','w','s','W','S'].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setInput('left',true);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setInput('right',true);if(e.key==='ArrowUp'||e.key.toLowerCase()==='w')setInput('up',true);if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')setInput('down',true);if(e.key===' ')setInput('fire',true)}});
+  window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')setInput('left',false);if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')setInput('right',false);if(e.key==='ArrowUp'||e.key.toLowerCase()==='w')setInput('up',false);if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')setInput('down',false);if(e.key===' ')setInput('fire',false)});
   function chargeBattleCoins(cost,label,done){
     if(typeof window.chargeGameCoins==='function'){window.chargeGameCoins(cost,label,()=>{done();refreshShop()});return;}
     if(typeof wallet==='undefined'||coinBalance()<cost){status('金玉が足りません。'+cost+'金玉必要です。');return;}
@@ -183,7 +183,7 @@
   $('sw-beam-upgrade').onclick=()=>{if(!state.beamUnlocked){chargeBattleCoins(300,'白濁ビーム解放',()=>{state.beamUnlocked=true;persist();status('白濁ビームを解放した！');});return;}if(state.beamLevel>=5)return;const cost=beamCosts[state.beamLevel];chargeBattleCoins(cost,'白濁ビーム強化',()=>{state.beamLevel++;persist();status('白濁ビームが太くなった！ Lv.'+(state.beamLevel+1));});};
   $('sw-equip-orb').onclick=()=>{state.weapon='orb';persist();showHome()};
   $('sw-equip-beam').onclick=()=>{if(state.beamUnlocked){state.weapon='beam';persist();showHome()}};
-  $('sw-match').onclick=startMatch;$('sw-friend-create').onclick=()=>joinFriendRoom('create');$('sw-friend-join').onclick=()=>joinFriendRoom('join');$('sw-friend-copy').onclick=copyFriendCode;$('sw-friend-copy-wait').onclick=copyFriendCode;$('sw-again').onclick=()=>{$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch()};
+  $('sw-match').onclick=startMatch;$('sw-friend-create').onclick=()=>joinFriendRoom('create');$('sw-friend-join').onclick=()=>joinFriendRoom('join');$('sw-friend-copy').onclick=copyFriendCode;$('sw-friend-copy-wait').onclick=copyFriendCode;$('sw-again').onclick=()=>{if(state.restartPending)return;state.restartPending=true;$('sw-again').disabled=true;stopGame();state.ended=false;state.mode='idle';$('sw-result').hidden=true;$('sw-home').hidden=false;startMatch().finally(()=>{state.restartPending=false;$('sw-again').disabled=false})};
   $('sw-leave').onclick=()=>{stopGame();showHome()};
   $('sw-arena').addEventListener('pointerdown',e=>{if(e.pointerType==='touch')setInput('fire',true)});
   $('sw-arena').addEventListener('pointerup',()=>setInput('fire',false));
@@ -195,18 +195,23 @@
     const {data:ratingRow}=await state.client.from('battle_ratings').select('rating').eq('user_id',state.user.id).maybeSingle();state.rating=ratingRow?.rating??1000;return state.client;
   }
   async function startMatch(){
-    stopGame();state.ended=false;state.hp=state.maxHp;state.enemyHp=state.maxHp;state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
-    $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;$('sw-myhp').textContent=state.maxHp;$('sw-enemyhp').textContent=state.maxHp;
+    stopGame();const token=state.matchToken=(state.matchToken||0)+1;
+    state.ended=false;state.mode='connecting';state.hp=state.maxHp;state.enemyHp=state.maxHp;state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.shots=[];state.enemyShots=[];state.opponent=null;
+    $('sw-home').hidden=true;$('sw-result').hidden=true;$('sw-game').hidden=false;updateHud();
     status('対戦相手を検索中…');$('sw-mode').textContent='検索中';
+    const timeout=(promise,ms,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+'タイムアウト')),ms))]);
     try{
-      const client=await getClient();const uid=state.user.id;
-      state.lobby=client.channel('shamarupi-war-lobby',{config:{presence:{key:uid}}});
-      state.lobby.on('presence',{event:'sync'},()=>tryPair());
-      await new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('ロビー接続タイムアウト')),5000);state.lobby.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(t);state.lobby.track({uid,joined:Date.now(),nick:'PLAYER'}).then(resolve)}if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(t);reject(new Error('ロビーに接続できません'))}})});
+      const client=await timeout(getClient(),8000,'ログイン');
+      if(token!==state.matchToken)return;
+      const uid=state.user.id;
+      state.lobby=client.channel('shamarupi-war-lobby-'+token,{config:{presence:{key:uid}}});
+      state.lobby.on('presence',{event:'sync'},()=>{if(token===state.matchToken)tryPair()});
+      await timeout(new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('ロビー接続タイムアウト')),8000);state.lobby.subscribe(s=>{if(s==='SUBSCRIBED'){clearTimeout(t);state.lobby.track({uid,joined:Date.now(),nick:'PLAYER'}).then(resolve,reject)}if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'){clearTimeout(t);reject(new Error('ロビーに接続できません'))}})}),9000,'ロビー接続');
+      if(token!==state.matchToken)return;
       state.mode='searching';tryPair();state.cpuAt=Date.now()+15000;
-      const poll=setInterval(()=>{if(state.mode!=='searching'){clearInterval(poll);return}tryPair();if(Date.now()>=state.cpuAt){clearInterval(poll);startCpu()}},250);
+      const poll=setInterval(()=>{if(token!==state.matchToken||state.mode!=='searching'){clearInterval(poll);return}tryPair();if(Date.now()>=state.cpuAt){clearInterval(poll);startCpu()}},250);
       state.searchPoll=poll;
-    }catch(e){console.warn(e);status('オンライン接続に失敗。CPU戦を開始します');startCpu();}
+    }catch(e){if(token!==state.matchToken)return;console.warn(e);status('オンライン接続に失敗。CPU戦を開始します');startCpu();}
   }
   function friendTopic(code){
     let h=2166136261;
@@ -271,17 +276,17 @@
     const roomId=state.roomId;
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,state.maxHp);}});
-    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
-    state.room.on('broadcast',{event:'hit'},({payload})=>{if(payload?.uid!==state.user.id){state.hp=Math.max(0,state.hp-(payload.damage||8));updateHud();if(state.hp<=0)finish(false)}});
+    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
+    // Damage is applied by the incoming projectile collision below; do not apply a second broadcast hit.
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
-  function startCpu(){if(state.mode==='playing'||state.mode==='ended')return;state.mode='cpu';state.opponent='CPU';$('sw-mode').textContent='CPU戦';status('相手が見つからなかったためCPU戦を開始！');beginGame()}
+  function startCpu(){if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;state.mode='cpu';state.opponent='CPU';$('sw-mode').textContent='CPU戦';status('相手が見つからなかったためCPU戦を開始！');beginGame()}
   function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0))}
   function updateHud(){
     $('sw-myhp').textContent=state.hp+' / '+state.maxHp;$('sw-enemyhp').textContent=state.enemyHp+' / '+state.maxHp;
     $('sw-myhp-fill').style.width=(state.hp/state.maxHp*100)+'%';$('sw-enemyhp-fill').style.width=(state.enemyHp/state.maxHp*100)+'%';
   }
-  function beginGame(){state.started=Date.now();state.lastShot=0;state.lastSync=0;state.shots=[];state.enemyShots=[];state.raf=requestAnimationFrame(tick)}
+  function beginGame(){if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;state.started=Date.now();state.lastShot=0;state.lastSync=0;state.cpuLastShot=Date.now();state.shots=[];state.enemyShots=[];updateHud();state.raf=requestAnimationFrame(tick)}
   function shoot(){
     const now=Date.now(),beam=state.weapon==='beam',level=beam?state.beamLevel:state.orbLevel,delay=beam?720:420;if(now-state.lastShot<delay)return;state.lastShot=now;
     const damage=beam?16+level*2:12+level*2;
@@ -316,14 +321,14 @@
     }catch(e){console.warn('rating update:',e);$('sw-rating-result').textContent='レート更新に失敗しました。再ログイン後に確認してください。';}
   }
   function cleanupChannels(){if(state.client&&state.room){state.client.removeChannel(state.room);state.room=null}if(state.client&&state.lobby){state.client.removeChannel(state.lobby);state.lobby=null}if(state.client&&state.friendChannel){state.client.removeChannel(state.friendChannel);state.friendChannel=null}}
-  function stopGame(){if(state.raf)cancelAnimationFrame(state.raf);if(state.searchPoll)clearInterval(state.searchPoll);state.mode='idle';state.keys={};cleanupChannels()}
+  function stopGame(){state.matchToken=(state.matchToken||0)+1;if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;if(state.searchPoll)clearInterval(state.searchPoll);state.searchPoll=null;state.mode='idle';state.keys={};resetStick();setInput('fire',false);cleanupChannels()}
   function tick(){
     if(state.mode!=='playing'&&state.mode!=='cpu')return;
-    const dt=1/60;if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
+    const dt=1/60;const nowFrame=()=>Date.now();if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
     if(state.keys.fire)shoot();
-    if(state.mode==='cpu'&&Math.random()<.025){state.enemyShots.push({x:state.ex-state.direction*.02,y:state.ey,vx:-state.direction*.014,life:100})}
+    if(state.mode==='cpu'&&nowFrame()-state.cpuLastShot>850){state.cpuLastShot=nowFrame();state.enemyShots.push({x:state.ex-state.direction*.035,y:state.y,vx:-state.direction*.022,life:120,damage:12,targeted:true})}
     state.shots.forEach(s=>{s.x+=s.vx;s.life--;const reach=s.beam?.045+ s.level*.009:.035+s.level*.004;if((state.direction===1?s.x>=state.ex-reach:s.x<=state.ex+reach)&&Math.abs(s.y-state.ey)<(.11+s.level*.006)&&s.life>0){s.life=0;state.enemyHp=Math.max(0,state.enemyHp-s.damage);if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'hit',payload:{uid:state.user.id,damage:s.damage}})}});
-    state.enemyShots.forEach(s=>{s.x+=s.vx;s.life--;const reach=s.beam?.045+s.level*.009:.035+s.level*.004;if((state.direction===1?s.x<=state.x+reach:s.x>=state.x-reach)&&Math.abs(s.y-state.y)<(.11+s.level*.006)&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-(s.damage||8));/* incoming projectile damages only this client */}});
+    state.enemyShots.forEach(s=>{const previousX=s.x;s.x+=s.vx;s.life--;const reach=s.beam?.065+s.level*.009:.055+s.level*.004;const crossed=state.direction===1?(previousX>=state.x-reach&&s.x<=state.x+reach):(previousX<=state.x+reach&&s.x>=state.x-reach);if(crossed&&Math.abs(s.y-state.y)<(s.targeted?.19:(.14+s.level*.006))&&s.life>0){s.life=0;state.hp=Math.max(0,state.hp-(s.damage||8));updateHud();if(state.hp<=0){finish(false);return}}});
     state.shots=state.shots.filter(s=>s.life>0&&s.x<1);state.enemyShots=state.enemyShots.filter(s=>s.life>0&&s.x>0);
     if(state.mode==='cpu'){state.ey=.5+Math.sin(Date.now()/900)*.22;if(state.enemyHp<=0){finish(true);return}}
     if(state.hp<=0){finish(false);return}
@@ -331,16 +336,21 @@
     if(state.mode==='playing'&&state.enemyHp<=0){finish(true);return}
     draw();updateHud();state.raf=requestAnimationFrame(tick)
   }
+  const fighterImage=(()=>{
+    const domImage=document.getElementById('playerImg');
+    const source=(domImage&&(domImage.currentSrc||domImage.src))||(typeof playerImg!=='undefined'&&playerImg&&(playerImg.currentSrc||playerImg.src||playerImg))||(typeof ASSETS!=='undefined'&&ASSETS.player)||'';
+    if(source instanceof HTMLImageElement)return source;
+    const image=new Image();if(typeof source==='string'&&source)image.src=source;return image;
+  })();
   function draw(){
     const c=$('sw-arena'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
     for(let i=0;i<55;i++){ctx.fillStyle='#ffffff22';ctx.fillRect((i*173)%w,(i*71)%h,2,2)}
     const px=state.x*w,py=state.y*h,ex=state.ex*w,ey=state.ey*h;
-    const fighterImage=document.getElementById('playerImg');
     function fighter(x,y,color,label){
       ctx.save();ctx.shadowColor=color;ctx.shadowBlur=16;ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(x,y,31,0,Math.PI*2);ctx.fill();
       ctx.shadowBlur=0;ctx.save();ctx.beginPath();ctx.arc(x,y,26,0,Math.PI*2);ctx.clip();
-      if(fighterImage&&fighterImage.complete&&fighterImage.naturalWidth){ctx.drawImage(fighterImage,x-25,y-25,50,50)}else{ctx.fillStyle='#64748b';ctx.fillRect(x-25,y-25,50,50);ctx.fillStyle='#fff';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('?',x,y+6)}
+      if(fighterImage&&fighterImage.naturalWidth>0){ctx.drawImage(fighterImage,x-25,y-25,50,50)}else{ctx.fillStyle='#64748b';ctx.fillRect(x-25,y-25,50,50);ctx.fillStyle='#fff';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('?',x,y+6)}
       ctx.restore();ctx.lineWidth=7;ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=14;ctx.beginPath();ctx.arc(x,y,29,0,Math.PI*2);ctx.stroke();
       ctx.shadowBlur=0;ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0f172a';ctx.strokeText(label,x,y-42);ctx.fillStyle='#fff';ctx.fillText(label,x,y-42);ctx.restore();
     }
