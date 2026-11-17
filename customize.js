@@ -13,29 +13,21 @@ if(!shopGrid||!$('playerImg')&&typeof playerImg==='undefined')return;
 const panel=document.createElement('section');panel.className='shop-item custom-media-panel';panel.style.gridColumn='1/-1';
 panel.innerHTML='<strong>🖼️ キャラクター画像カスタマイズ</strong><p>写真をアップロードしてプレイヤーの見た目を変更（1回200金の玉）</p><input id="customPlayerImage" type="file" accept="image/*" style="max-width:100%"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px"><img id="customPlayerPreview" alt="画像プレビュー" style="width:64px;height:64px;object-fit:cover;border-radius:12px;display:none"><button id="saveCustomPlayerImage" type="button">200金の玉で設定</button><button id="resetCustomPlayerImage" type="button">初期画像に戻す</button></div><hr style="margin:14px 0;border-color:#ddd"><details style="margin-top:10px"><summary>自分の攻撃ボイスを録音・アップロード</summary><p>録音または音声ファイルから攻撃時のボイスを設定（1回200金の玉）</p><input id="customVoiceFile" type="file" accept="audio/*" style="max-width:100%"><div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><button id="recordCustomVoice" type="button">録音開始</button><button id="stopCustomVoice" type="button" disabled>録音停止</button><button id="saveCustomVoice" type="button" disabled>200金の玉で設定</button><button id="previewCustomVoice" type="button" disabled>試聴</button></div></details><p id="customMediaStatus" class="tiny-note">画像・ボイスはこの端末のブラウザに保存されます。</p>';
 shopGrid.appendChild(panel);
-// 「追加ボイス」カテゴリ内の「準備中」を実際のボイス商品に置き換える
-const voiceHeading=Array.from(shopGrid.querySelectorAll('h1,h2,h3,h4,strong,b,div,span,p'))
- .filter(el=>el.children.length===0&&el.textContent.trim()==='追加ボイス')
- .sort((a,b)=>a.textContent.length-b.textContent.length)[0];
-if(voiceHeading){
- let scope=voiceHeading.parentElement;
- while(scope&&scope!==shopGrid&&!scope.textContent.includes('準備中')) scope=scope.parentElement;
- const placeholder=scope&&Array.from(scope.querySelectorAll('*')).find(el=>el.children.length===0&&el.textContent.includes('準備中'));
- if(placeholder){
-  const cards=document.createElement('div');
-  cards.innerHTML="<div id=\"presetAttackVoice\" class=\"shop-item\"><b>⚔️ 攻撃ボイス：シャマルピー（関西ver）</b><p>攻撃時に再生される追加ボイス</p><div><button id=\"previewShamarupiPreset\" type=\"button\">▶ 試聴</button> <button id=\"setShamarupiPreset\" type=\"button\">200金の玉で設定</button> <button id=\"resetCustomVoice\" type=\"button\">初期ボイスに戻す</button></div></div><div id=\"presetDefeatVoice\" class=\"shop-item\"><b>💥 敗北ボイス：ンニイイイ（全員ver）</b><p>敗北時に再生される追加ボイス</p><div><button id=\"previewNniPreset\" type=\"button\">▶ 試聴</button> <button id=\"setNniPreset\" type=\"button\">200金の玉で設定</button> <button id=\"resetDefeatVoice\" type=\"button\">初期ボイスに戻す</button></div></div>";
-  placeholder.replaceWith(cards);
- }else{console.warn('追加ボイス欄の準備中表示が見つかりません');}
-}else{console.warn('追加ボイス見出しが見つかりません');}
+// 追加ボイスはカスタマイズ欄のDOMを書き換えず、ショップ内の独立セクションとして描画する
+const voiceSection=document.createElement('section');
+voiceSection.className='shop-item additional-voice-section';
+voiceSection.style.gridColumn='1/-1';
+voiceSection.innerHTML='<strong>🎙️ 追加ボイス</strong><p>攻撃時・敗北時に再生するボイスを設定できます。</p><div class="additional-voice-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-top:10px"><article class="shop-item" id="presetAttackVoice"><b>⚔️ 攻撃ボイス：シャマルピー（関西ver）</b><p>攻撃時に再生（200金の玉）</p><button id="previewShamarupiPreset" type="button">▶ 試聴</button> <button id="setShamarupiPreset" type="button">購入・設定（200金の玉）</button> <button id="resetCustomVoice" type="button">初期ボイスに戻す</button></article><article class="shop-item" id="presetDefeatVoice"><b>💥 敗北ボイス：ンニイイイ（全員ver）</b><p>敗北時に再生（200金の玉）</p><button id="previewNniPreset" type="button">▶ 試聴</button> <button id="setNniPreset" type="button">購入・設定（200金の玉）</button> <button id="resetDefeatVoice" type="button">初期ボイスに戻す</button></article></div>';
+shopGrid.appendChild(voiceSection);
 let imageBlob=null,voiceBlob=null,recording=null,recorder=null,voicePreview=null,customVoiceUrl=null,customImageUrl=null,resumeBgmAfterRecording=false;
 const imgInput=$('customPlayerImage'),imgPreview=$('customPlayerPreview'),voiceInput=$('customVoiceFile'),recordBtn=$('recordCustomVoice'),stopBtn=$('stopCustomVoice'),saveVoiceBtn=$('saveCustomVoice'),previewBtn=$('previewCustomVoice'),msg=$('customMediaStatus');
 function msgSet(t){msg.textContent=t;}
-async function presetBlob(path){const res=await fetch(path+'?v=1');if(!res.ok)throw new Error('音声ファイルを読み込めません');const b64=(await res.text()).trim();const raw=atob(b64);const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new Blob([bytes],{type:'audio/mpeg'});}
+async function presetBlob(path){const res=await fetch(path+'?v=2');if(!res.ok)throw new Error('音声ファイルを読み込めません');const b64=(await res.text()).trim();const raw=atob(b64);const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new Blob([bytes],{type:'audio/mpeg'});}
 async function previewPreset(path){try{const blob=await presetBlob(path),url=URL.createObjectURL(blob),a=new Audio(url);a.volume=audioPrefs.voice/100;a.play().catch(()=>msgSet('試聴を開始できませんでした。'));a.onended=()=>URL.revokeObjectURL(url);}catch(e){msgSet('試聴に失敗しました：'+e.message);}}
 $('previewShamarupiPreset').addEventListener('click',()=>previewPreset('./audio/shamarupi-kansai.mp3.b64'));
 $('previewNniPreset').addEventListener('click',()=>previewPreset('./audio/nni-all.mp3.b64'));
-$('setShamarupiPreset').addEventListener('click',()=>charge(200,'攻撃ボイス',async()=>{try{await putMedia('attackVoice',await presetBlob('./audio/shamarupi-kansai.mp3.b64'));voiceBlob=null;msgSet('攻撃時のボイスをシャマルピー（関西ver）に設定しました。');}catch(e){msgSet('設定に失敗しました：'+e.message);}}));
-$('setNniPreset').addEventListener('click',()=>charge(200,'敗北ボイス',async()=>{try{await putMedia('defeatVoice',await presetBlob('./audio/nni-all.mp3.b64'));msgSet('敗北時のボイスをンニイイイ（全員ver）に設定しました。');}catch(e){msgSet('設定に失敗しました：'+e.message);}}));
+$('setShamarupiPreset').addEventListener('click',async()=>{try{const purchased=await getMedia('attackVoicePurchased');const apply=async()=>{await putMedia('attackVoice',await presetBlob('./audio/shamarupi-kansai.mp3.b64'));await putMedia('attackVoicePurchased',true);voiceBlob=null;msgSet('攻撃時のボイスをシャマルピー（関西ver）に設定しました。');};if(purchased){await apply();return;}charge(200,'攻撃ボイス',apply);}catch(e){msgSet('設定に失敗しました：'+e.message);}});
+$('setNniPreset').addEventListener('click',async()=>{try{const purchased=await getMedia('defeatVoicePurchased');const apply=async()=>{await putMedia('defeatVoice',await presetBlob('./audio/nni-all.mp3.b64'));await putMedia('defeatVoicePurchased',true);msgSet('敗北時のボイスをンニイイイ（全員ver）に設定しました。');};if(purchased){await apply();return;}charge(200,'敗北ボイス',apply);}catch(e){msgSet('設定に失敗しました：'+e.message);}});
 $('resetDefeatVoice').addEventListener('click',async()=>{await removeMedia('defeatVoice');msgSet('敗北時のボイスを初期設定に戻しました。');});
 
 function previewImage(blob){if(customImageUrl)URL.revokeObjectURL(customImageUrl);customImageUrl=URL.createObjectURL(blob);playerImg.src=customImageUrl;imgPreview.src=customImageUrl;imgPreview.style.display='block';}
