@@ -19,11 +19,19 @@ function buildView(slot){
  const actions=document.createElement('div');actions.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px';
  const preview=document.createElement('button');preview.type='button';preview.textContent='▶ 試聴';
  preview.onclick=async()=>{try{const u=URL.createObjectURL(await presetBlob(path)),a=new Audio(u);a.play().catch(()=>status('試聴を開始できませんでした'));a.onended=()=>URL.revokeObjectURL(u);}catch(e){status('試聴失敗：'+e.message);}};
- const set=document.createElement('button');set.type='button';set.textContent='200金の玉で購入・設定';
- set.onclick=()=>charge(200,name,async()=>{try{await dbPut(key,await presetBlob(path));await dbPut(key+'Purchased',true);status(name+'を設定しました。');set.textContent='設定済み ✓';}catch(e){status('設定失敗：'+e.message);}});
+ const set=document.createElement('button');set.type='button';
+ const purchasedKey=key+'Purchased';
+ const refreshPresetButton=async()=>{set.textContent=(await dbGet(purchasedKey))?'設定（購入済み・無料）':'200金の玉で購入';};
+ refreshPresetButton();
+ set.onclick=async()=>{try{
+  const purchased=await dbGet(purchasedKey);
+  const apply=async()=>{await dbPut(key,await presetBlob(path));await dbPut(purchasedKey,true);status(name+'を設定しました。次回から何度でも無料で変更できます。');await refreshPresetButton();};
+  if(purchased){await apply();return;}
+  await charge(200,name,apply);
+ }catch(e){status('設定失敗：'+e.message);}};
  actions.append(preview,set);preset.appendChild(actions);
  const reset=document.createElement('button');reset.type='button';reset.textContent='初期ボイスに戻す';reset.style.cssText='width:100%;margin-top:9px;background:#64748b';
- reset.onclick=async()=>{try{const d=await dbOpen();await new Promise((ok,no)=>{const tx=d.transaction('media','readwrite'),st=tx.objectStore('media');st.delete(key);st.delete(key+'Purchased');tx.oncomplete=ok;tx.onerror=()=>no(tx.error);});status((isAttack?'攻撃':'敗北')+'ボイスを初期設定に戻しました。');set.textContent='200金の玉で購入・設定';}catch(e){status('初期化に失敗しました：'+e.message);}};
+ reset.onclick=async()=>{try{const d=await dbOpen();await new Promise((ok,no)=>{const tx=d.transaction('media','readwrite'),st=tx.objectStore('media');st.delete(key);tx.oncomplete=ok;tx.onerror=()=>no(tx.error);});status((isAttack?'攻撃':'敗北')+'ボイスを初期設定に戻しました。');await refreshPresetButton();}catch(e){status('初期化に失敗しました：'+e.message);}};
  preset.appendChild(reset);view.appendChild(preset);
  const custom=document.createElement('section');custom.style.cssText='padding:14px;border:1px solid #dbe1ea;border-radius:14px;margin:10px 0;background:#fff;color:#111827';
  custom.innerHTML='<b style="font-size:17px">🎙️ 自分のボイス</b><p style="font-size:13px;color:#64748b">音声ファイルを登録してライブラリに保存</p>';
