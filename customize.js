@@ -36,7 +36,7 @@ voicePage.innerHTML='<div style="max-width:620px;margin:0 auto"><h3 style="margi
 voiceSection.appendChild(voicePage);
 $('chooseMyAttackVoice').addEventListener('click',async()=>{const host=$('attackVoiceManager');host.hidden=!host.hidden;if(!host.hidden){$('defeatVoiceManager').hidden=true;await renderVoiceLibraries();host.scrollIntoView({behavior:'smooth',block:'nearest'});voiceStatus('攻撃ボイスを選択、または新しく追加してください。');}});
 $('chooseMyDefeatVoice').addEventListener('click',async()=>{const host=$('defeatVoiceManager');host.hidden=!host.hidden;if(!host.hidden){$('attackVoiceManager').hidden=true;await renderVoiceLibraries();host.scrollIntoView({behavior:'smooth',block:'nearest'});voiceStatus('敗北ボイスを選択、または新しく追加してください。');}});
-refreshVoiceButtons();renderVoiceLibraries();
+refreshVoiceButtons();
 
 function voiceStatus(t){const el=$('additionalVoiceStatus');if(el)el.textContent=t;}
 const libraryDraft={attack:null,defeat:null},libraryRecorders={attack:null,defeat:null};
@@ -58,6 +58,8 @@ async function renderVoiceLibraries(){
   });
  }
 }
+renderVoiceLibraries();
+
 async function selectLibraryVoice(slot,id){
  const list=await readLibrary(slot),item=list.find(x=>x.id===id);if(!item)return;
  await putMedia(activeKeys[slot],item.blob);await loadCustomAudio();
