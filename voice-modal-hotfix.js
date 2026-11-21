@@ -1,22 +1,50 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
+function dbOpen(){return new Promise((ok,no)=>{const r=indexedDB.open('escapeGameCustomMediaV1',3);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains('media'))r.result.createObjectStore('media');};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});}
+async function dbGet(k){const d=await dbOpen();return new Promise((ok,no)=>{const r=d.transaction('media','readonly').objectStore('media').get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});}
+async function dbPut(k,v){const d=await dbOpen();return new Promise((ok,no)=>{const t=d.transaction('media','readwrite');t.objectStore('media').put(v,k);t.oncomplete=ok;t.onerror=()=>no(t.error);});}
+async function presetBlob(path){const r=await fetch(path+'?v=3');if(!r.ok)throw Error('音声データを取得できません');const b=atob((await r.text()).trim()),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return new Blob([a],{type:'audio/mpeg'});}
+function status(t){const el=$('voiceModalStatus');if(el)el.textContent=t;}
+async function charge(cost,label,done){
+ if(typeof window.chargeGameCoins==='function'){window.chargeGameCoins(cost,label,done);return;}
+ if(typeof window.wallet==='number'&&window.wallet>=cost&&typeof window.saveWallet==='function'){window.wallet-=cost;window.saveWallet();if(typeof window.updateShopUI==='function')window.updateShopUI();await done();return;}
+ status('金の玉が足りないか、決済機能を読み込めません。'); 
+}
+function buildView(slot){
+ const id=slot+'VoiceCategoryView';let view=$(id);if(view)return view;
+ const isAttack=slot==='attack',name=isAttack?'シャマルピー（関西ver）':'ンニイイイ（全員ver）',path=isAttack?'./audio/shamarupi-kansai.mp3.b64':'./audio/nni-all.mp3.b64',key=isAttack?'attackVoice':'defeatVoice';
+ view=document.createElement('div');view.id=id;view.style.cssText='display:none;width:100%;max-height:65vh;overflow:auto';
+ const preset=document.createElement('section');preset.style.cssText='padding:14px;border:1px solid #dbe1ea;border-radius:14px;margin:10px 0;background:#fff;color:#111827';
+ preset.innerHTML='<b style="font-size:17px">'+(isAttack?'⚔️ ':'💥 ')+name+'</b><p style="font-size:13px;color:#64748b">プリセットボイス</p>';
+ const actions=document.createElement('div');actions.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px';
+ const preview=document.createElement('button');preview.type='button';preview.textContent='▶ 試聴';
+ preview.onclick=async()=>{try{const u=URL.createObjectURL(await presetBlob(path)),a=new Audio(u);a.play().catch(()=>status('試聴を開始できませんでした'));a.onended=()=>URL.revokeObjectURL(u);}catch(e){status('試聴失敗：'+e.message);}};
+ const set=document.createElement('button');set.type='button';set.textContent='200金の玉で購入・設定';
+ set.onclick=()=>charge(200,name,async()=>{try{await dbPut(key,await presetBlob(path));await dbPut(key+'Purchased',true);status(name+'を保存しました。');set.textContent='設定済み ✓';}catch(e){status('設定失敗：'+e.message);}});
+ actions.append(preview,set);preset.appendChild(actions);view.appendChild(preset);
+ const custom=document.createElement('section');custom.style.cssText='padding:14px;border:1px solid #dbe1ea;border-radius:14px;margin:10px 0;background:#fff;color:#111827';
+ custom.innerHTML='<b style="font-size:17px">🎙️ 自分のボイス</b><p style="font-size:13px;color:#64748b">音声ファイルを登録してライブラリに保存</p>';
+ const input=document.createElement('input');input.type='file';input.accept='audio/*';input.style.cssText='width:100%;margin:8px 0';
+ const save=document.createElement('button');save.type='button';save.textContent='100金の玉で追加';save.disabled=true;
+ let blob=null;input.onchange=()=>{blob=input.files&&input.files[0]||null;save.disabled=!blob;};
+ save.onclick=()=>charge(100,'自分のボイス',async()=>{try{const list=(await dbGet(slot+'VoiceLibrary'))||[];list.push({id:'voice'+Date.now(),name:blob.name||'自分のボイス',blob,active:true});await dbPut(slot+'VoiceLibrary',list);await dbPut(key,blob);status('ライブラリに追加しました。');save.textContent='追加済み ✓';}catch(e){status('保存失敗：'+e.message);}});
+ custom.append(input,save);view.appendChild(custom);
+ const modalBody=$('voiceModalBody');if(modalBody)modalBody.appendChild(view);
+ return view;
+}
 function showCategory(slot){
  const modal=$('voiceLibraryModal');if(!modal)return;
- const home=$('voiceCategoryHome');
- const view=$(slot+'VoiceCategoryView');
- if(!view){const body=$('voiceModalBody');if(body){let msg=$('voiceCategoryError');if(!msg){msg=document.createElement('p');msg.id='voiceCategoryError';msg.style.cssText='padding:16px;color:#b91c1c';body.appendChild(msg);}msg.textContent='「'+(slot==='attack'?'攻撃':'敗北')+'」の画面がまだ作られていません。初期化処理を確認中です。';}return;}
- if(home)home.style.setProperty('display','none','important');
- const back=$('backVoiceCategories');if(back){back.style.setProperty('display','inline-flex','important');}
- const other=$( (slot==='attack'?'defeat':'attack')+'VoiceCategoryView');if(other)other.style.setProperty('display','none','important');
- view.hidden=false;view.style.setProperty('display','block','important');view.style.setProperty('visibility','visible','important');view.style.setProperty('opacity','1','important');
- view.querySelectorAll('button,input').forEach(el=>el.disabled=false);
- const body=$('voiceModalBody');if(body){body.scrollTop=0;}
+ const home=$('voiceCategoryHome');if(home)home.style.setProperty('display','none','important');
+ const view=buildView(slot);
+ const other=$( (slot==='attack'?'defeat':'attack')+'VoiceCategoryView');if(other)other.style.display='none';
+ const back=$('backVoiceCategories');if(back)back.style.setProperty('display','inline-flex','important');
+ view.hidden=false;view.style.setProperty('display','block','important');view.style.visibility='visible';
+ const body=$('voiceModalBody');if(body)body.scrollTop=0;
 }
 function backHome(){
  const home=$('voiceCategoryHome');if(home)home.style.setProperty('display','grid','important');
- ['attack','defeat'].forEach(s=>{const v=$(s+'VoiceCategoryView');if(v)v.style.setProperty('display','none','important');});
- const back=$('backVoiceCategories');if(back)back.style.setProperty('display','none','important');
- const err=$('voiceCategoryError');if(err)err.remove();
+ ['attack','defeat'].forEach(s=>{const v=$(s+'VoiceCategoryView');if(v)v.style.display='none';});
+ const back=$('backVoiceCategories');if(back)back.style.display='none';
 }
 function bind(){
  const trigger=$('openAdditionalVoices');if(!trigger)return;
@@ -25,17 +53,11 @@ function bind(){
  if(!trigger.dataset.voiceOpenBound){trigger.dataset.voiceOpenBound='1';trigger.addEventListener('click',e=>{e.preventDefault();modal.style.setProperty('display','flex','important');},true);}
 }
 function delegated(e){
- const t=e.target&&e.target.closest?e.target.closest('#openAttackVoiceCategory,#openDefeatVoiceCategory,#backVoiceCategories,#closeVoiceModal'):null;
- if(!t)return;
- if(t.id==='openAttackVoiceCategory'||t.id==='openDefeatVoiceCategory'){
-  e.preventDefault();e.stopPropagation();showCategory(t.id==='openAttackVoiceCategory'?'attack':'defeat');
- }else if(t.id==='backVoiceCategories'){e.preventDefault();e.stopPropagation();backHome();}
- else if(t.id==='closeVoiceModal'){e.preventDefault();e.stopPropagation();const m=$('voiceLibraryModal');if(m)m.style.setProperty('display','none','important');document.body.style.overflow='';}
+ const t=e.target&&e.target.closest?e.target.closest('#openAttackVoiceCategory,#openDefeatVoiceCategory,#backVoiceCategories,#closeVoiceModal'):null;if(!t)return;
+ if(t.id==='openAttackVoiceCategory'||t.id==='openDefeatVoiceCategory'){e.preventDefault();e.stopPropagation();showCategory(t.id==='openAttackVoiceCategory'?'attack':'defeat');}
+ else if(t.id==='backVoiceCategories'){e.preventDefault();e.stopPropagation();backHome();}
+ else if(t.id==='closeVoiceModal'){e.preventDefault();e.stopPropagation();const m=$('voiceLibraryModal');if(m)m.style.display='none';document.body.style.overflow='';}
 }
-function start(){
- bind();
- ['click','pointerup','touchend'].forEach(type=>document.addEventListener(type,delegated,{capture:true,passive:false}));
- const mo=new MutationObserver(bind);mo.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>mo.disconnect(),30000);
-}
+function start(){bind();['click','pointerup','touchend'].forEach(type=>document.addEventListener(type,delegated,{capture:true,passive:false}));const mo=new MutationObserver(bind);mo.observe(document.documentElement,{childList:true,subtree:true});setTimeout(()=>mo.disconnect(),30000);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
