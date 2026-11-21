@@ -150,21 +150,21 @@ $('resetDefeatVoice').addEventListener('click',async()=>{await removeMedia('defe
 
 function previewImage(blob){if(customImageUrl)URL.revokeObjectURL(customImageUrl);customImageUrl=URL.createObjectURL(blob);playerImg.src=customImageUrl;imgPreview.src=customImageUrl;imgPreview.style.display='block';}
 async function renderImageLibrary(){
- const host=$('playerImageLibrary');if(!host)return;const list=(await getMedia('playerImageLibrary'))||[];const current=await getMedia('playerImage');
+ const host=$('playerImageLibrary');if(!host)return;const list=(await getMedia('playerImageLibrary'))||[];const activeId=await getMedia('playerImageActiveId');
  host.innerHTML='';
  if(!list.length){host.textContent='登録した画像はまだありません。';host.style.color='#94a3b8';return;}
  list.forEach((item,index)=>{
   const card=document.createElement('div');card.style.cssText='border:1px solid #dbe1ea;border-radius:12px;padding:7px;background:#f8fafc;text-align:center;min-width:0';
   const img=document.createElement('img');img.src=URL.createObjectURL(item.blob);img.alt='保存画像 '+(index+1);img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px';
-  const active=document.createElement('div');active.textContent=current===item.blob?'使用中':'保存済み';active.style.cssText='font-size:11px;color:#64748b;margin:4px 0';
-  const choose=document.createElement('button');choose.type='button';choose.textContent='この画像に設定';choose.style.cssText='width:100%;font-size:11px;padding:7px 3px';choose.addEventListener('click',async()=>{await putMedia('playerImage',item.blob);previewImage(item.blob);await renderImageLibrary();msgSet('保存済み画像に変更しました。');});
+  const active=document.createElement('div');active.textContent=activeId===item.id?'✓ 使用中':'保存済み';active.style.cssText='font-size:11px;color:#64748b;margin:4px 0';
+  const choose=document.createElement('button');choose.type='button';choose.textContent='この画像に設定';choose.style.cssText='width:100%;font-size:11px;padding:7px 3px';choose.addEventListener('click',async()=>{await putMedia('playerImage',item.blob);await putMedia('playerImageActiveId',item.id);previewImage(item.blob);await renderImageLibrary();msgSet('保存済み画像に変更しました。');});
   card.append(img,active,choose);host.appendChild(card);
  });
 }
 
 function previewVoice(blob){if(customVoiceUrl)URL.revokeObjectURL(customVoiceUrl);customVoiceUrl=URL.createObjectURL(blob);previewBtn.disabled=false;}
 imgInput.addEventListener('change',()=>{const f=imgInput.files?.[0];if(!f)return;if(!f.type.startsWith('image/')){msgSet('画像ファイルを選択してください。');return;}if(f.size>8*1024*1024){msgSet('画像は8MB以下にしてください。');return;}imageBlob=f;imgPreview.src=URL.createObjectURL(f);imgPreview.style.display='block';msgSet('画像を選択しました。設定には200金の玉が必要です。');});
-$('saveCustomPlayerImage').addEventListener('click',async()=>{if(!imageBlob){msgSet('先に画像を選択してください。');return;}charge(200,'キャラクター画像',async()=>{try{const list=(await getMedia('playerImageLibrary'))||[];const id='img'+Date.now()+Math.random().toString(36).slice(2,6);list.unshift({id,blob:imageBlob,createdAt:Date.now()});await putMedia('playerImageLibrary',list);await putMedia('playerImage',imageBlob);previewImage(imageBlob);imageBlob=null;imgInput.value='';await renderImageLibrary();msgSet('画像をライブラリに登録しました。次回から無料で切り替えできます。');}catch(e){msgSet('保存に失敗しました：'+e.message);}});});
+$('saveCustomPlayerImage').addEventListener('click',async()=>{if(!imageBlob){msgSet('先に画像を選択してください。');return;}charge(200,'キャラクター画像',async()=>{try{const list=(await getMedia('playerImageLibrary'))||[];const id='img'+Date.now()+Math.random().toString(36).slice(2,6);list.unshift({id,blob:imageBlob,createdAt:Date.now()});await putMedia('playerImageLibrary',list);await putMedia('playerImage',imageBlob);await putMedia('playerImageActiveId',id);previewImage(imageBlob);imageBlob=null;imgInput.value='';await renderImageLibrary();msgSet('画像をライブラリに登録しました。次回から無料で切り替えできます。');}catch(e){msgSet('保存に失敗しました：'+e.message);}});});
 $('resetCustomPlayerImage').addEventListener('click',async()=>{try{await removeMedia('playerImage');playerImg.src=ASSETS.player;if(customImageUrl)URL.revokeObjectURL(customImageUrl);imgPreview.style.display='none';imageBlob=null;msgSet('初期画像に戻しました。');}catch(e){msgSet('初期化に失敗しました。');}});
 voiceInput.addEventListener('change',()=>{const f=voiceInput.files?.[0];if(!f)return;if(!f.type.startsWith('audio/')){msgSet('音声ファイルを選択してください。');return;}if(f.size>12*1024*1024){msgSet('音声ファイルは12MB以下にしてください。');return;}voiceBlob=f;saveVoiceBtn.disabled=false;previewBtn.disabled=false;msgSet('音声ファイルを選択しました。設定には200金の玉が必要です。');});
 function setIOSAudioSession(type){try{if(navigator.audioSession)navigator.audioSession.type=type;}catch(e){console.warn('audioSession:',e);}}
@@ -230,7 +230,7 @@ muteBtn.addEventListener('click',()=>{window.__escapeMasterMute=!window.__escape
 const originalStartBGM=startBGM;startBGM=function(){if(window.__escapeMasterMute||window.__customVoiceRecording)return;originalStartBGM();};
 const originalPlay=play;play=function(a){if(window.__escapeMasterMute)return;originalPlay(a);};
 // 音声再生は1か所で制御。購入済み音声がある場合は標準音声を鳴らさず、カスタム音声だけを再生する。
-getMedia('playerImage').then(async blob=>{if(blob){previewImage(blob);let list=(await getMedia('playerImageLibrary'))||[];if(!list.length){list=[{id:'legacy'+Date.now(),blob,createdAt:Date.now()}];await putMedia('playerImageLibrary',list);}await renderImageLibrary();}else await renderImageLibrary();}).catch(()=>{});
+getMedia('playerImage').then(async blob=>{if(blob){previewImage(blob);let list=(await getMedia('playerImageLibrary'))||[];if(!list.length){list=[{id:'legacy'+Date.now(),blob,createdAt:Date.now()}];await putMedia('playerImageLibrary',list);await putMedia('playerImageActiveId',list[0].id);}await renderImageLibrary();}else await renderImageLibrary();}).catch(()=>{});
 getMedia('attackVoice').then(blob=>{if(blob){voiceBlob=blob;if(previewBtn)previewBtn.disabled=false;if(saveVoiceBtn)saveVoiceBtn.disabled=false;msgSet('保存済みの攻撃ボイスがあります。');}}).catch(()=>{});
 applyMute();
 })();
