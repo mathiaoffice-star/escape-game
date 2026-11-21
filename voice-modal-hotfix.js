@@ -28,10 +28,26 @@ function buildView(slot){
  const custom=document.createElement('section');custom.style.cssText='padding:14px;border:1px solid #dbe1ea;border-radius:14px;margin:10px 0;background:#fff;color:#111827';
  custom.innerHTML='<b style="font-size:17px">🎙️ 自分のボイス</b><p style="font-size:13px;color:#64748b">音声ファイルを登録してライブラリに保存</p>';
  const input=document.createElement('input');input.type='file';input.accept='audio/*';input.style.cssText='width:100%;margin:8px 0';
+ const controls=document.createElement('div');controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';
+ const record=document.createElement('button');record.type='button';record.textContent='🎙️ 録音開始';
+ const stop=document.createElement('button');stop.type='button';stop.textContent='■ 録音停止';stop.disabled=true;
+ const previewCustom=document.createElement('button');previewCustom.type='button';previewCustom.textContent='▶ 試聴';previewCustom.disabled=true;
  const save=document.createElement('button');save.type='button';save.textContent='100金の玉で追加';save.disabled=true;
- let blob=null;input.onchange=()=>{blob=input.files&&input.files[0]||null;save.disabled=!blob;};
- save.onclick=()=>charge(100,'自分のボイス',async()=>{try{const list=(await dbGet(slot+'VoiceLibrary'))||[];list.push({id:'voice'+Date.now(),name:blob.name||'自分のボイス',blob,active:true});await dbPut(slot+'VoiceLibrary',list);await dbPut(key,blob);status('ライブラリに追加しました。');save.textContent='追加済み ✓';}catch(e){status('保存失敗：'+e.message);}});
- custom.append(input,save);view.appendChild(custom);
+ let blob=null,recorder=null,stream=null,previewUrl=null;
+ const setBlob=b=>{blob=b;save.disabled=!b;previewCustom.disabled=!b;};
+ input.onchange=()=>{const file=input.files&&input.files[0];if(file){setBlob(file);status('音声ファイルを選択しました。保存前に試聴できます。');}};
+ record.onclick=async()=>{try{
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('このブラウザは録音に対応していません。音声ファイルを選択してください。');
+  stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  const chunks=[];recorder=new MediaRecorder(stream);
+  recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  recorder.onstop=()=>{const type=recorder.mimeType||'audio/webm';setBlob(new Blob(chunks,{type}));stream?.getTracks().forEach(t=>t.stop());stream=null;record.disabled=false;stop.disabled=true;status('録音しました。保存前に試聴できます。');};
+  recorder.start();record.disabled=true;stop.disabled=false;status('録音中です…');
+ }catch(e){stream?.getTracks().forEach(t=>t.stop());stream=null;record.disabled=false;stop.disabled=true;status('録音できません：'+e.message);}};
+ stop.onclick=()=>{if(recorder&&recorder.state!=='inactive')recorder.stop();};
+ previewCustom.onclick=()=>{if(!blob)return;if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=URL.createObjectURL(blob);const audio=new Audio(previewUrl);audio.play().catch(e=>status('試聴できません：'+e.message));audio.onended=()=>{URL.revokeObjectURL(previewUrl);previewUrl=null;};};
+ save.onclick=()=>{if(!blob)return;charge(100,'自分のボイス',async()=>{try{const list=(await dbGet(slot+'VoiceLibrary'))||[];list.push({id:'voice'+Date.now(),name:input.files?.[0]?.name||'録音ボイス',blob,active:true});await dbPut(slot+'VoiceLibrary',list);await dbPut(key,blob);status('ライブラリに追加しました。');save.textContent='追加済み ✓';}catch(e){status('保存失敗：'+e.message);}});};
+ controls.append(record,stop,previewCustom,save);custom.append(input,controls);view.appendChild(custom);
  const modalBody=$('voiceModalBody');if(modalBody)modalBody.appendChild(view);
  return view;
 }
