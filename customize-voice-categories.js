@@ -53,9 +53,9 @@ const categoryViews={};
 for(let index=0;index<2;index++){
  const slot=index===0?'attack':'defeat';
  const presetCard=sourceCards[index];
- const manager=$(slot+'VoiceManager');
+ const manager=voicePage.querySelector('#'+slot+'VoiceManager');
  if(!presetCard||!manager)throw new Error('ボイスカードの初期化に失敗: '+slot);
- const oldCustomButton=$(slot==='attack'?'chooseMyAttackVoice':'chooseMyDefeatVoice');
+ const oldCustomButton=presetCard.querySelector('#'+(slot==='attack'?'chooseMyAttackVoice':'chooseMyDefeatVoice'));
  if(oldCustomButton)oldCustomButton.remove();
  const heading=presetCard.querySelector('h3');if(heading)heading.remove();
  presetCard.style.cssText='display:block;margin:0 0 10px;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box;width:100%';
