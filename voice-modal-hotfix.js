@@ -21,11 +21,11 @@ function buildView(slot){
  preview.onclick=async()=>{try{const u=URL.createObjectURL(await presetBlob(path)),a=new Audio(u);a.play().catch(()=>status('試聴を開始できませんでした'));a.onended=()=>URL.revokeObjectURL(u);}catch(e){status('試聴失敗：'+e.message);}};
  const set=document.createElement('button');set.type='button';
  const purchasedKey=key+'Purchased';
- const refreshPresetButton=async()=>{set.textContent=(await dbGet(purchasedKey))?'設定（購入済み・無料）':'200金の玉で購入';};
+ const refreshPresetButton=async()=>{set.textContent=((await dbGet(purchasedKey))||localStorage.getItem('voicePurchased_'+key)==='1')?'設定（購入済み・無料）':'200金の玉で購入';};
  refreshPresetButton();
  set.onclick=async()=>{try{
-  const purchased=await dbGet(purchasedKey);
-  const apply=async()=>{await dbPut(key,await presetBlob(path));await dbPut(purchasedKey,true);status(name+'を設定しました。次回から何度でも無料で変更できます。');await refreshPresetButton();};
+  const purchased=(await dbGet(purchasedKey))||localStorage.getItem('voicePurchased_'+key)==='1';
+  const apply=async()=>{await dbPut(key,await presetBlob(path));await dbPut(purchasedKey,true);localStorage.setItem('voicePurchased_'+key,'1');status(name+'を設定しました。次回から何度でも無料で変更できます。');await refreshPresetButton();};
   if(purchased){await apply();return;}
   await charge(200,name,apply);
  }catch(e){status('設定失敗：'+e.message);}};
