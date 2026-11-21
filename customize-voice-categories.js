@@ -70,8 +70,23 @@ sourceCards.forEach((presetCard,index)=>{
  categoryViews[slot]=view;
  voiceModalBody.appendChild(view);
 });
-function setVoiceCategory(slot){voiceModal.querySelector('#voiceCategoryHome').style.display='none';Object.entries(categoryViews).forEach(([key,view])=>{const active=key===slot;view.style.setProperty('display',active?'block':'none','important');view.hidden=!active;});$('backVoiceCategories').style.display='block';$('backVoiceCategories').hidden=false;renderVoiceLibraries();}
-function backVoiceCategories(){Object.values(categoryViews).forEach(view=>{view.hidden=true;view.style.setProperty('display','none','important');});$('backVoiceCategories').style.display='none';$('backVoiceCategories').hidden=true;voiceModal.querySelector('#voiceCategoryHome').style.display='grid';for(const slot of ['attack','defeat']){const manager=$(slot+'VoiceManager');manager.hidden=true;manager.style.display='none';}}
+function setVoiceCategory(slot){
+ voiceModal.querySelector('#voiceCategoryHome').style.setProperty('display','none','important');
+ for(const key of ['attack','defeat']){
+  const active=key===slot,view=categoryViews[key],card=view.firstElementChild,custom=view.lastElementChild;
+  view.hidden=!active;view.style.setProperty('display',active?'block':'none','important');
+  card.hidden=!active;card.style.setProperty('display',active?'block':'none','important');
+  custom.hidden=!active;custom.style.setProperty('display',active?'block':'none','important');
+ }
+ $('backVoiceCategories').hidden=false;$('backVoiceCategories').style.setProperty('display','inline-flex','important');
+ renderVoiceLibraries();
+}
+function backVoiceCategories(){
+ for(const key of ['attack','defeat']){const view=categoryViews[key];view.hidden=true;view.style.setProperty('display','none','important');}
+ $('backVoiceCategories').hidden=true;$('backVoiceCategories').style.setProperty('display','none','important');
+ voiceModal.querySelector('#voiceCategoryHome').style.setProperty('display','grid','important');
+ for(const slot of ['attack','defeat']){const manager=$(slot+'VoiceManager');manager.hidden=true;manager.style.display='none';}
+}
 $('openAttackVoiceCategory').addEventListener('click',()=>setVoiceCategory('attack'));
 $('openDefeatVoiceCategory').addEventListener('click',()=>setVoiceCategory('defeat'));
 $('backVoiceCategories').addEventListener('click',backVoiceCategories);
