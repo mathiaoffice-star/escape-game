@@ -71,20 +71,21 @@ sourceCards.forEach((presetCard,index)=>{
  voiceModalBody.appendChild(view);
 });
 function setVoiceCategory(slot){
- voiceModal.querySelector('#voiceCategoryHome').style.setProperty('display','none','important');
+ const home=voiceModal.querySelector('#voiceCategoryHome');home.setAttribute('hidden','');home.hidden=true;home.style.setProperty('display','none','important');
  for(const key of ['attack','defeat']){
   const active=key===slot,view=categoryViews[key],card=view.firstElementChild,custom=view.lastElementChild;
+  if(active){view.removeAttribute('hidden');card.removeAttribute('hidden');custom.removeAttribute('hidden');}else{view.setAttribute('hidden','');card.setAttribute('hidden','');custom.setAttribute('hidden','');}
   view.hidden=!active;view.style.setProperty('display',active?'block':'none','important');
   card.hidden=!active;card.style.setProperty('display',active?'block':'none','important');
   custom.hidden=!active;custom.style.setProperty('display',active?'block':'none','important');
  }
- $('backVoiceCategories').hidden=false;$('backVoiceCategories').style.setProperty('display','inline-flex','important');
+ $('backVoiceCategories').removeAttribute('hidden');$('backVoiceCategories').hidden=false;$('backVoiceCategories').style.setProperty('display','inline-flex','important');
  renderVoiceLibraries();
 }
 function backVoiceCategories(){
  for(const key of ['attack','defeat']){const view=categoryViews[key];view.hidden=true;view.style.setProperty('display','none','important');const card=view.firstElementChild;const custom=view.lastElementChild;card.hidden=true;card.style.setProperty('display','none','important');custom.hidden=true;custom.style.setProperty('display','none','important');}
  const back=$('backVoiceCategories');back.hidden=true;back.style.setProperty('display','none','important');
- const home=voiceModal.querySelector('#voiceCategoryHome');home.hidden=false;home.style.setProperty('display','grid','important');
+ const home=voiceModal.querySelector('#voiceCategoryHome');home.removeAttribute('hidden');home.hidden=false;home.style.setProperty('display','grid','important');
  for(const id of ['openAttackVoiceCategory','openDefeatVoiceCategory']){const button=$(id);button.hidden=false;button.style.setProperty('display','block','important');button.style.setProperty('width','100%','important');}
  for(const slot of ['attack','defeat']){const manager=$(slot+'VoiceManager');manager.hidden=true;manager.style.display='none';}
 }
