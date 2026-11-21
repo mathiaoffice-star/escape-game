@@ -40,86 +40,61 @@ const voicePage=document.createElement('div');
 voicePage.id='additionalVoicesPage';
 voicePage.style.cssText='display:block;position:static;background:transparent;color:#111827;overflow:visible;padding:0;box-sizing:border-box;font-family:inherit;width:100%;max-width:none;min-width:0';
 voicePage.innerHTML='<div style="width:100%;max-width:none;margin:0 auto"><div style="display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:stretch"><section class="shop-item" style="margin:0;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:white;min-width:0;width:100%;box-sizing:border-box"><h3 style="font-size:17px;margin:0 0 6px">⚔️ 攻撃ボイス</h3><p style="font-size:13px;margin:0 0 8px">シャマルピー（関西ver）</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px"><button id="previewShamarupiPreset" type="button">▶ 試聴</button><button id="setShamarupiPreset" type="button">200金の玉で購入・設定</button><button id="resetAttackPreset" type="button" style="grid-column:1/-1;background:#64748b">初期ボイスに戻す</button><button id="chooseMyAttackVoice" type="button" style="grid-column:1/-1">自分のボイスを設定</button></div><div id="attackVoiceManager" hidden style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #dbe1ea"><h4 style="font-size:14px;margin:4px 0 8px">📁 音声を追加</h4><input id="attackLibraryFile" type="file" accept="audio/*" style="width:100%;max-width:100%;font-size:13px;box-sizing:border-box"><div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><button id="recordAttackLibrary" type="button">🎙️ 録音</button><button id="stopAttackLibrary" type="button" disabled>停止</button><button id="saveAttackLibrary" type="button" disabled>100金で追加</button></div><h4 style="font-size:14px;margin:8px 0">📚 登録済み攻撃ボイス</h4><div id="attackLibraryList"></div></div></section><section class="shop-item" style="margin:0;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:white;min-width:0;width:100%;box-sizing:border-box"><h3 style="font-size:17px;margin:0 0 6px">💥 敗北ボイス</h3><p style="font-size:13px;margin:0 0 8px">ンニイイイ（全員ver）</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px"><button id="previewNniPreset" type="button">▶ 試聴</button><button id="setNniPreset" type="button">200金の玉で購入・設定</button><button id="resetDefeatVoice" type="button" style="grid-column:1/-1;background:#64748b">初期ボイスに戻す</button><button id="chooseMyDefeatVoice" type="button" style="grid-column:1/-1">自分のボイスを設定</button></div><div id="defeatVoiceManager" hidden style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid #dbe1ea"><h4 style="font-size:14px;margin:4px 0 8px">📁 音声を追加</h4><input id="defeatLibraryFile" type="file" accept="audio/*" style="width:100%;max-width:100%;font-size:13px;box-sizing:border-box"><div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><button id="recordDefeatLibrary" type="button">🎙️ 録音</button><button id="stopDefeatLibrary" type="button" disabled>停止</button><button id="saveDefeatLibrary" type="button" disabled>100金で追加</button></div><h4 style="font-size:14px;margin:8px 0">📚 登録済み敗北ボイス</h4><div id="defeatLibraryList"></div></div></section></div></div>';
-const voiceModal=document.createElement('div');voiceModal.id='voiceLibraryModal';voiceModal.hidden=true;
-voiceModal.style.cssText='display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.72);padding:max(14px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom));box-sizing:border-box;align-items:center;justify-content:center';
+// 追加ボイス画面：表示状態を単純なdisplay切替だけで管理する
+const voiceModal=document.createElement('div');
+voiceModal.id='voiceLibraryModal';
+voiceModal.style.cssText='display:none;position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.72);padding:max(14px,env(safe-area-inset-top)) 12px max(14px,env(safe-area-inset-bottom));box-sizing:border-box;align-items:center;justify-content:center';
 voiceModal.innerHTML='<section style="width:min(100%,560px);max-height:100%;overflow:auto;background:#fff;border-radius:18px;padding:16px;box-sizing:border-box;color:#111827"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><strong style="font-size:19px">🎙️ 追加ボイス</strong><button id="closeVoiceModal" type="button" style="padding:7px 12px">閉じる ✕</button></div><div id="voiceModalBody"><div id="voiceCategoryHome" style="display:grid;grid-template-columns:1fr;gap:12px"><button id="openAttackVoiceCategory" type="button" style="padding:20px;font-size:18px">⚔️ 攻撃ボイス</button><button id="openDefeatVoiceCategory" type="button" style="padding:20px;font-size:18px">💥 敗北ボイス</button></div><button id="backVoiceCategories" type="button" style="display:none;margin:0 0 12px;background:#64748b">← ボイス選択に戻る</button></div><p id="voiceModalStatus" role="status" style="font-size:12px;color:#64748b;margin:10px 0 0"></p></section>';
 document.body.appendChild(voiceModal);
 const voiceModalBody=voiceModal.querySelector('#voiceModalBody');
 const voiceGrid=voicePage.querySelector('div > div');
-const sourceCards=Array.from(voiceGrid.children);
-voicePage.style.padding='0';
-voiceGrid.style.display='block';
+const sourceCards=Array.from(voiceGrid.children).filter(node=>node.matches('section'));
 const categoryViews={};
-sourceCards.forEach((presetCard,index)=>{
+for(let index=0;index<2;index++){
  const slot=index===0?'attack':'defeat';
+ const presetCard=sourceCards[index];
  const manager=$(slot+'VoiceManager');
+ if(!presetCard||!manager)throw new Error('ボイスカードの初期化に失敗: '+slot);
  const oldCustomButton=$(slot==='attack'?'chooseMyAttackVoice':'chooseMyDefeatVoice');
  if(oldCustomButton)oldCustomButton.remove();
  const heading=presetCard.querySelector('h3');if(heading)heading.remove();
- presetCard.style.cssText+=';display:block!important;margin:0 0 10px;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box';
+ presetCard.style.cssText='display:block;margin:0 0 10px;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box;width:100%';
  const customCard=document.createElement('section');
- customCard.style.cssText='display:block;margin:0;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box';
+ customCard.style.cssText='display:block;margin:0;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box;width:100%';
  const customTitle=document.createElement('h3');customTitle.textContent='🎙️ 自分のボイス';customTitle.style.cssText='font-size:17px;margin:0 0 8px';
  const customDesc=document.createElement('p');customDesc.textContent='録音・音声ファイルの追加、登録済みボイスの管理ができます。';customDesc.style.cssText='font-size:13px;color:#64748b;margin:0 0 10px';
  const toggle=document.createElement('button');toggle.type='button';toggle.textContent='自分のボイスを設定';toggle.style.cssText='width:100%;padding:11px';
  customCard.append(customTitle,customDesc,toggle,manager);
- manager.hidden=true;manager.style.display='none';manager.style.marginTop='12px';manager.style.paddingTop='12px';manager.style.borderTop='1px solid #dbe1ea';
- toggle.addEventListener('click',()=>{const open=manager.hidden;manager.hidden=!open;manager.style.display=open?'block':'none';toggle.textContent=open?'設定を閉じる':'自分のボイスを設定';if(open)renderVoiceLibraries();});
- const view=document.createElement('div');view.style.cssText='display:none;width:100%;';
- view.append(presetCard,customCard);
- categoryViews[slot]=view;
- voiceModalBody.appendChild(view);
-});
-function setVoiceCategory(slot){
- const home=voiceModal.querySelector('#voiceCategoryHome');home.setAttribute('hidden','');home.hidden=true;home.style.setProperty('display','none','important');
- for(const key of ['attack','defeat']){
-  const active=key===slot,view=categoryViews[key],card=view.firstElementChild,custom=view.lastElementChild;
-  if(active){view.removeAttribute('hidden');card.removeAttribute('hidden');custom.removeAttribute('hidden');}else{view.setAttribute('hidden','');card.setAttribute('hidden','');custom.setAttribute('hidden','');}
-  view.hidden=!active;view.style.setProperty('display',active?'block':'none','important');
-  card.hidden=!active;card.style.setProperty('display',active?'block':'none','important');
-  custom.hidden=!active;custom.style.setProperty('display',active?'block':'none','important');
- }
- $('backVoiceCategories').removeAttribute('hidden');$('backVoiceCategories').hidden=false;$('backVoiceCategories').style.setProperty('display','inline-flex','important');
+ manager.hidden=false;manager.style.display='none';manager.style.marginTop='12px';manager.style.paddingTop='12px';manager.style.borderTop='1px solid #dbe1ea';
+ toggle.addEventListener('click',()=>{const open=manager.style.display==='none';manager.style.display=open?'block':'none';toggle.textContent=open?'設定を閉じる':'自分のボイスを設定';if(open)renderVoiceLibraries();});
+ const view=document.createElement('div');view.id=slot+'VoiceCategoryView';view.style.cssText='display:none;width:100%';
+ view.append(presetCard,customCard);categoryViews[slot]=view;voiceModalBody.appendChild(view);
+}
+function showVoiceChooser(){
+ voiceModal.querySelector('#voiceCategoryHome').style.display='grid';
+ $('backVoiceCategories').style.display='none';
+ categoryViews.attack.style.display='none';categoryViews.defeat.style.display='none';
+ for(const slot of ['attack','defeat']){const manager=$(slot+'VoiceManager');manager.style.display='none';}
+}
+function showVoiceCategory(slot){
+ voiceModal.querySelector('#voiceCategoryHome').style.display='none';
+ $('backVoiceCategories').style.display='inline-flex';
+ categoryViews.attack.style.display=slot==='attack'?'block':'none';
+ categoryViews.defeat.style.display=slot==='defeat'?'block':'none';
  renderVoiceLibraries();
 }
-function backVoiceCategories(){
- for(const key of ['attack','defeat']){const view=categoryViews[key];view.hidden=true;view.style.setProperty('display','none','important');const card=view.firstElementChild;const custom=view.lastElementChild;card.hidden=true;card.style.setProperty('display','none','important');custom.hidden=true;custom.style.setProperty('display','none','important');}
- const back=$('backVoiceCategories');back.hidden=true;back.style.setProperty('display','none','important');
- const home=voiceModal.querySelector('#voiceCategoryHome');home.removeAttribute('hidden');home.hidden=false;home.style.setProperty('display','grid','important');
- for(const id of ['openAttackVoiceCategory','openDefeatVoiceCategory']){const button=$(id);button.hidden=false;button.style.setProperty('display','block','important');button.style.setProperty('width','100%','important');}
- for(const slot of ['attack','defeat']){const manager=$(slot+'VoiceManager');manager.hidden=true;manager.style.display='none';}
-}
-$('openAttackVoiceCategory').addEventListener('click',()=>setVoiceCategory('attack'));
-$('openDefeatVoiceCategory').addEventListener('click',()=>setVoiceCategory('defeat'));
-$('backVoiceCategories').addEventListener('click',backVoiceCategories);
-function openAdditionalVoiceModal(){
- // Every open starts from the category chooser, never from a stale sub-screen.
- const home=voiceModal.querySelector('#voiceCategoryHome');
- home.removeAttribute('hidden');home.hidden=false;home.style.cssText='display:grid!important;grid-template-columns:1fr;gap:12px';
- for(const id of ['openAttackVoiceCategory','openDefeatVoiceCategory']){
-  const button=$(id);button.removeAttribute('hidden');button.hidden=false;
-  button.style.cssText+=';display:block!important;width:100%;box-sizing:border-box';
- }
- for(const key of ['attack','defeat']){
-  const view=categoryViews[key];view.setAttribute('hidden','');view.hidden=true;view.style.cssText='display:none!important;width:100%';
-  for(const node of Array.from(view.children)){node.setAttribute('hidden','');node.hidden=true;node.style.setProperty('display','none','important');}
-  const manager=$(key+'VoiceManager');manager.hidden=true;manager.style.display='none';
- }
- const back=$('backVoiceCategories');back.setAttribute('hidden','');back.hidden=true;back.style.cssText+=';display:none!important';
- voiceModal.removeAttribute('hidden');voiceModal.hidden=false;voiceModal.style.cssText+=';display:flex!important';
-}
-// ボタン自体が後続スクリプトで再生成されても開けるよう、documentで捕捉する
+function openAdditionalVoiceModal(){showVoiceChooser();voiceModal.style.display='flex';}
+$('openAttackVoiceCategory').addEventListener('click',()=>showVoiceCategory('attack'));
+$('openDefeatVoiceCategory').addEventListener('click',()=>showVoiceCategory('defeat'));
+$('backVoiceCategories').addEventListener('click',showVoiceChooser);
+$('closeVoiceModal').addEventListener('click',()=>{voiceModal.style.display='none';});
+voiceModal.addEventListener('click',event=>{if(event.target===voiceModal)voiceModal.style.display='none';});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')voiceModal.style.display='none';});
 document.addEventListener('click',event=>{
  const trigger=event.target&&event.target.closest?event.target.closest('#openAdditionalVoices'):null;
  if(!trigger)return;
- event.preventDefault();event.stopPropagation();
- try{openAdditionalVoiceModal();}catch(error){console.error('[voice modal open]',error);voiceModal.hidden=false;voiceModal.style.setProperty('display','flex','important');}
+ event.preventDefault();event.stopPropagation();openAdditionalVoiceModal();
 },true);
-const openButton=$('openAdditionalVoices');
-if(openButton)openButton.onclick=event=>{event.preventDefault();openAdditionalVoiceModal();};
-$('closeVoiceModal').addEventListener('click',()=>{voiceModal.hidden=true;voiceModal.style.display='none';});
-voiceModal.addEventListener('click',e=>{if(e.target===voiceModal){voiceModal.hidden=true;voiceModal.style.display='none';}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!voiceModal.hidden){voiceModal.hidden=true;voiceModal.style.display='none';}});
 refreshVoiceButtons();
 
 function voiceStatus(t){const el=$('voiceModalStatus');if(el)el.textContent=t;}
