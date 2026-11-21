@@ -20,8 +20,11 @@ function buildView(slot){
  const preview=document.createElement('button');preview.type='button';preview.textContent='▶ 試聴';
  preview.onclick=async()=>{try{const u=URL.createObjectURL(await presetBlob(path)),a=new Audio(u);a.play().catch(()=>status('試聴を開始できませんでした'));a.onended=()=>URL.revokeObjectURL(u);}catch(e){status('試聴失敗：'+e.message);}};
  const set=document.createElement('button');set.type='button';set.textContent='200金の玉で購入・設定';
- set.onclick=()=>charge(200,name,async()=>{try{await dbPut(key,await presetBlob(path));await dbPut(key+'Purchased',true);status(name+'を保存しました。');set.textContent='設定済み ✓';}catch(e){status('設定失敗：'+e.message);}});
- actions.append(preview,set);preset.appendChild(actions);view.appendChild(preset);
+ set.onclick=()=>charge(200,name,async()=>{try{await dbPut(key,await presetBlob(path));await dbPut(key+'Purchased',true);status(name+'を設定しました。');set.textContent='設定済み ✓';}catch(e){status('設定失敗：'+e.message);}});
+ actions.append(preview,set);preset.appendChild(actions);
+ const reset=document.createElement('button');reset.type='button';reset.textContent='初期ボイスに戻す';reset.style.cssText='width:100%;margin-top:9px;background:#64748b';
+ reset.onclick=async()=>{try{const d=await dbOpen();await new Promise((ok,no)=>{const tx=d.transaction('media','readwrite'),st=tx.objectStore('media');st.delete(key);st.delete(key+'Purchased');tx.oncomplete=ok;tx.onerror=()=>no(tx.error);});status((isAttack?'攻撃':'敗北')+'ボイスを初期設定に戻しました。');set.textContent='200金の玉で購入・設定';}catch(e){status('初期化に失敗しました：'+e.message);}};
+ preset.appendChild(reset);view.appendChild(preset);
  const custom=document.createElement('section');custom.style.cssText='padding:14px;border:1px solid #dbe1ea;border-radius:14px;margin:10px 0;background:#fff;color:#111827';
  custom.innerHTML='<b style="font-size:17px">🎙️ 自分のボイス</b><p style="font-size:13px;color:#64748b">音声ファイルを登録してライブラリに保存</p>';
  const input=document.createElement('input');input.type='file';input.accept='audio/*';input.style.cssText='width:100%;margin:8px 0';
