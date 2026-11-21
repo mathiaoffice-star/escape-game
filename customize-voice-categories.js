@@ -108,8 +108,15 @@ function openAdditionalVoiceModal(){
  const back=$('backVoiceCategories');back.setAttribute('hidden','');back.hidden=true;back.style.cssText+=';display:none!important';
  voiceModal.removeAttribute('hidden');voiceModal.hidden=false;voiceModal.style.cssText+=';display:flex!important';
 }
-$('openAdditionalVoices').addEventListener('click',openAdditionalVoiceModal);
-voiceSection.addEventListener('click',event=>{if(event.target.closest('#openAdditionalVoices')){event.preventDefault();openAdditionalVoiceModal();}});
+// ボタン自体が後続スクリプトで再生成されても開けるよう、documentで捕捉する
+document.addEventListener('click',event=>{
+ const trigger=event.target&&event.target.closest?event.target.closest('#openAdditionalVoices'):null;
+ if(!trigger)return;
+ event.preventDefault();event.stopPropagation();
+ try{openAdditionalVoiceModal();}catch(error){console.error('[voice modal open]',error);voiceModal.hidden=false;voiceModal.style.setProperty('display','flex','important');}
+},true);
+const openButton=$('openAdditionalVoices');
+if(openButton)openButton.onclick=event=>{event.preventDefault();openAdditionalVoiceModal();};
 $('closeVoiceModal').addEventListener('click',()=>{voiceModal.hidden=true;voiceModal.style.display='none';});
 voiceModal.addEventListener('click',e=>{if(e.target===voiceModal){voiceModal.hidden=true;voiceModal.style.display='none';}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!voiceModal.hidden){voiceModal.hidden=true;voiceModal.style.display='none';}});
