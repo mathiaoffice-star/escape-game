@@ -13,7 +13,7 @@ body{margin:0;min-height:100vh;display:grid;place-items:center;background:#10182
 <script>
 (async()=>{
 try{
-const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),180000);document.getElementById('status').textContent='ゲームデータをダウンロード中…';let html='';try{const response=await fetch('./index.html%20.html?loader=9',{signal:controller.signal,cache:'no-store'});if(!response.ok)throw new Error('ゲーム本体を読み込めませんでした ('+response.status+')');const total=Number(response.headers.get('content-length'))||0;const reader=response.body.getReader();const decoder=new TextDecoder('utf-8');let received=0;while(true){const part=await reader.read();if(part.done)break;received+=part.value.length;html+=decoder.decode(part.value,{stream:true});const mb=(received/1048576).toFixed(1);const all=total?(total/1048576).toFixed(1):'?';document.getElementById('status').textContent='ゲームデータをダウンロード中… '+mb+' / '+all+' MB';}html+=decoder.decode();}catch(e){if(e.name==='AbortError')throw new Error('読み込みが3分でタイムアウトしました。通信を確認して再読み込みしてください。');throw e;}finally{clearTimeout(timeout);}document.getElementById('status').textContent='ゲームを準備しています…';
+const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),180000);document.getElementById('status').textContent='ゲームデータをダウンロード中…';let html='';try{const response=await fetch('./index.html%20.html?loader=10',{signal:controller.signal,cache:'no-store'});if(!response.ok)throw new Error('ゲーム本体を読み込めませんでした ('+response.status+')');const total=Number(response.headers.get('content-length'))||0;const reader=response.body.getReader();const decoder=new TextDecoder('utf-8');let received=0;while(true){const part=await reader.read();if(part.done)break;received+=part.value.length;html+=decoder.decode(part.value,{stream:true});const mb=(received/1048576).toFixed(1);const all=total?(total/1048576).toFixed(1):'?';document.getElementById('status').textContent='ゲームデータをダウンロード中… '+mb+' / '+all+' MB';}html+=decoder.decode();}catch(e){if(e.name==='AbortError')throw new Error('読み込みが3分でタイムアウトしました。通信を確認して再読み込みしてください。');throw e;}finally{clearTimeout(timeout);}document.getElementById('status').textContent='ゲームを準備しています…';
 const replacements=[
 ['<div class="shop-item"><strong>🎙️ 追加ボイス</strong><p>追加音声素材を用意したら解放予定。</p><button type="button" disabled>準備中</button></div>','<div class="shop-item additional-voice-section" id="additionalVoiceShopCard"><strong>🎙️ 追加ボイス</strong><p>購入後は自動設定。いつでも初期ボイスに戻せます。</p><div class="additional-voice-grid" style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px"><article class="shop-item" id="presetAttackVoice"><b>⚔️ 攻撃ボイス</b><p>シャマルピー（関西ver）</p><button id="previewShamarupiPreset" type="button">▶ 試聴</button><button id="setShamarupiPreset" type="button">購入・設定（200金の玉）</button><button id="resetAttackPreset" type="button">初期ボイスに戻す</button></article><article class="shop-item" id="presetDefeatVoice"><b>💥 敗北ボイス</b><p>ンニイイイ（全員ver）</p><button id="previewNniPreset" type="button">▶ 試聴</button><button id="setNniPreset" type="button">購入・設定（200金の玉）</button><button id="resetDefeatVoice" type="button">初期ボイスに戻す</button></article></div></div>'],
 
@@ -110,7 +110,7 @@ html=html.replace(/ESCAPE GAME/g,'シャマルピー戦争');
 document.open();document.write(html);document.close();
 const bootScripts=[
  './customize-voice-categories.js?v=11',
- './voice-modal-hotfix.js?v=7',
+ './voice-modal-hotfix.js?v=8',
  './stripe-store.js?v=ios-audio2',
  './battle-mode.js?v=27',
  './voice-fix.js?v=playback-only-8',
