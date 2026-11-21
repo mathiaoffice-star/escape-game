@@ -47,7 +47,7 @@ voiceModal.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(1
 voiceModal.innerHTML='<section style="width:min(100%,560px);max-height:100%;overflow:auto;background:#fff;border-radius:18px;padding:16px;box-sizing:border-box;color:#111827"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><strong id="voiceModalTitle" style="font-size:18px">🎙️ ボイス設定</strong><button id="closeVoiceModal" type="button" style="padding:7px 12px">閉じる ✕</button></div><p style="font-size:13px;color:#64748b;margin:0 0 12px">録音または音声ファイルを追加し、ライブラリから設定できます。</p><div id="voiceModalBody"></div></section>';
 document.body.appendChild(voiceModal);
 const voiceModalBody=voiceModal.querySelector('#voiceModalBody');
-for(const slot of ['attack','defeat']){const manager=$(slot+'VoiceManager');manager.hidden=false;manager.style.cssText='display:block;margin:0;padding:0;border:0';voiceModalBody.appendChild(manager);manager.hidden=true;}
+for(const slot of ['attack','defeat']){const manager=$(slot+'VoiceManager');manager.hidden=false;manager.style.cssText='margin:0;padding:0;border:0';voiceModalBody.appendChild(manager);manager.hidden=true;}
 function openVoiceModal(slot){$('attackVoiceManager').hidden=slot!=='attack';$('defeatVoiceManager').hidden=slot!=='defeat';$('voiceModalTitle').textContent=slot==='attack'?'⚔️ 攻撃ボイスの設定':'💥 敗北ボイスの設定';voiceModal.hidden=false;renderVoiceLibraries();voiceStatus(slot==='attack'?'攻撃ボイスを選択、または新しく追加してください。':'敗北ボイスを選択、または新しく追加してください。');}
 $('closeVoiceModal').addEventListener('click',()=>{voiceModal.hidden=true;});
 voiceModal.addEventListener('click',e=>{if(e.target===voiceModal)voiceModal.hidden=true;});
