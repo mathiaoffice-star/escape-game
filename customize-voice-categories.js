@@ -46,21 +46,39 @@ voiceModal.innerHTML='<section style="width:min(100%,560px);max-height:100%;over
 document.body.appendChild(voiceModal);
 const voiceModalBody=voiceModal.querySelector('#voiceModalBody');
 const voiceGrid=voicePage.querySelector('div > div');
-const voiceCategoryCards=Array.from(voiceGrid.children);
+const sourceCards=Array.from(voiceGrid.children);
 voicePage.style.padding='0';
 voiceGrid.style.display='block';
-voiceCategoryCards.forEach(card=>{card.style.display='none';voiceModalBody.appendChild(card);});
-function showVoiceCategory(slot){const index=slot==='attack'?0:1;voiceModal.querySelector('#voiceCategoryHome').style.display='none';voiceCategoryCards.forEach((card,i)=>card.style.display=i===index?'block':'none');$('backVoiceCategories').style.display='block';renderVoiceLibraries();}
-function backVoiceCategories(){voiceCategoryCards.forEach(card=>card.style.display='none');$('backVoiceCategories').style.display='none';voiceModal.querySelector('#voiceCategoryHome').style.display='grid';$('attackVoiceManager').hidden=true;$('attackVoiceManager').style.display='none';$('defeatVoiceManager').hidden=true;$('defeatVoiceManager').style.display='none';}
-$('openAttackVoiceCategory').addEventListener('click',()=>showVoiceCategory('attack'));
-$('openDefeatVoiceCategory').addEventListener('click',()=>showVoiceCategory('defeat'));
+const categoryViews={};
+sourceCards.forEach((presetCard,index)=>{
+ const slot=index===0?'attack':'defeat';
+ const manager=$(slot+'VoiceManager');
+ const oldCustomButton=$(slot==='attack'?'chooseMyAttackVoice':'chooseMyDefeatVoice');
+ if(oldCustomButton)oldCustomButton.remove();
+ const heading=presetCard.querySelector('h3');if(heading)heading.remove();
+ presetCard.style.cssText+=';display:block!important;margin:0 0 10px;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box';
+ const customCard=document.createElement('section');
+ customCard.style.cssText='display:block;margin:0;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box';
+ const customTitle=document.createElement('h3');customTitle.textContent='🎙️ 自分のボイス';customTitle.style.cssText='font-size:17px;margin:0 0 8px';
+ const customDesc=document.createElement('p');customDesc.textContent='録音・音声ファイルの追加、登録済みボイスの管理ができます。';customDesc.style.cssText='font-size:13px;color:#64748b;margin:0 0 10px';
+ const toggle=document.createElement('button');toggle.type='button';toggle.textContent='自分のボイスを設定';toggle.style.cssText='width:100%;padding:11px';
+ customCard.append(customTitle,customDesc,toggle,manager);
+ manager.hidden=true;manager.style.display='none';manager.style.marginTop='12px';manager.style.paddingTop='12px';manager.style.borderTop='1px solid #dbe1ea';
+ toggle.addEventListener('click',()=>{const open=manager.hidden;manager.hidden=!open;manager.style.display=open?'block':'none';toggle.textContent=open?'設定を閉じる':'自分のボイスを設定';if(open)renderVoiceLibraries();});
+ const view=document.createElement('div');view.style.cssText='display:none;width:100%;';
+ view.append(presetCard,customCard);
+ categoryViews[slot]=view;
+ voiceModalBody.appendChild(view);
+});
+function setVoiceCategory(slot){voiceModal.querySelector('#voiceCategoryHome').style.display='none';Object.entries(categoryViews).forEach(([key,view])=>{const active=key===slot;view.style.setProperty('display',active?'block':'none','important');view.hidden=!active;});$('backVoiceCategories').style.display='block';$('backVoiceCategories').hidden=false;renderVoiceLibraries();}
+function backVoiceCategories(){Object.values(categoryViews).forEach(view=>{view.hidden=true;view.style.setProperty('display','none','important');});$('backVoiceCategories').style.display='none';$('backVoiceCategories').hidden=true;voiceModal.querySelector('#voiceCategoryHome').style.display='grid';for(const slot of ['attack','defeat']){const manager=$(slot+'VoiceManager');manager.hidden=true;manager.style.display='none';}}
+$('openAttackVoiceCategory').addEventListener('click',()=>setVoiceCategory('attack'));
+$('openDefeatVoiceCategory').addEventListener('click',()=>setVoiceCategory('defeat'));
 $('backVoiceCategories').addEventListener('click',backVoiceCategories);
 $('openAdditionalVoices').addEventListener('click',()=>{backVoiceCategories();voiceModal.hidden=false;voiceModal.style.display='flex';});
 $('closeVoiceModal').addEventListener('click',()=>{voiceModal.hidden=true;voiceModal.style.display='none';});
 voiceModal.addEventListener('click',e=>{if(e.target===voiceModal){voiceModal.hidden=true;voiceModal.style.display='none';}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!voiceModal.hidden){voiceModal.hidden=true;voiceModal.style.display='none';}});
-$('chooseMyAttackVoice').addEventListener('click',()=>{const el=$('attackVoiceManager');el.hidden=!el.hidden;el.style.display=el.hidden?'none':'block';if(!el.hidden){$('defeatVoiceManager').hidden=true;$('defeatVoiceManager').style.display='none';renderVoiceLibraries();}});
-$('chooseMyDefeatVoice').addEventListener('click',()=>{const el=$('defeatVoiceManager');el.hidden=!el.hidden;el.style.display=el.hidden?'none':'block';if(!el.hidden){$('attackVoiceManager').hidden=true;$('attackVoiceManager').style.display='none';renderVoiceLibraries();}});
 refreshVoiceButtons();
 
 function voiceStatus(t){const el=$('voiceModalStatus');if(el)el.textContent=t;}
