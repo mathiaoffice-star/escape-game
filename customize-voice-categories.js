@@ -164,8 +164,8 @@ for(const slot of ['attack','defeat']){
 
 async function refreshVoiceButtons(){
  const [ap,dp,av,dv]=await Promise.all([getMedia('attackVoicePurchased'),getMedia('defeatVoicePurchased'),getMedia('attackVoice'),getMedia('defeatVoice')]);
- $('setShamarupiPreset').textContent=ap?'設定':'200金の玉で購入';
- $('setNniPreset').textContent=dp?'設定':'200金の玉で購入';
+ $('setShamarupiPreset').textContent=(ap||localStorage.getItem('voicePurchased_attackVoice')==='1')?'設定（購入済み・無料）':'200金の玉で購入';
+ $('setNniPreset').textContent=(dp||localStorage.getItem('voicePurchased_defeatVoice')==='1')?'設定（購入済み・無料）':'200金の玉で購入';
  $('resetAttackPreset').style.display=av?'block':'none';
  $('resetDefeatVoice').style.display=dv?'block':'none';
 }
@@ -179,7 +179,7 @@ $('previewNniPreset').addEventListener('click',()=>previewPreset('./audio/nni-al
 async function applyPresetVoice(key,path,label){
  let stage='購入状態の確認';
  try{
-  const purchased=await getMedia(key+'Purchased');
+  const purchased=(await getMedia(key+'Purchased'))||localStorage.getItem('voicePurchased_'+key)==='1';
   stage='音声ファイルの取得';
   const blob=await presetBlob(path);
   if(!blob||!blob.size)throw new Error('音声データが空です');
@@ -187,6 +187,7 @@ async function applyPresetVoice(key,path,label){
   const save=async()=>{
    await putMedia(key,blob);
    await putMedia(key+'Purchased',true);
+   localStorage.setItem('voicePurchased_'+key,'1');
    stage='再生用データの準備';
    try{await loadCustomAudio();}catch(e){console.warn('Audio preload warning:',e);}
    stage='画面の更新';
