@@ -91,7 +91,17 @@ function backVoiceCategories(){
 $('openAttackVoiceCategory').addEventListener('click',()=>setVoiceCategory('attack'));
 $('openDefeatVoiceCategory').addEventListener('click',()=>setVoiceCategory('defeat'));
 $('backVoiceCategories').addEventListener('click',backVoiceCategories);
-$('openAdditionalVoices').addEventListener('click',()=>{backVoiceCategories();voiceModal.hidden=false;voiceModal.style.display='flex';});
+function openAdditionalVoiceModal(){
+ try{
+  for(const key of ['attack','defeat']){const view=categoryViews[key];if(view){view.hidden=true;view.style.setProperty('display','none','important');for(const node of Array.from(view.children)){node.hidden=true;node.style.setProperty('display','none','important');}}}
+  const home=voiceModal.querySelector('#voiceCategoryHome');home.hidden=false;home.style.setProperty('display','grid','important');
+  const back=$('backVoiceCategories');back.hidden=true;back.style.setProperty('display','none','important');
+  for(const id of ['openAttackVoiceCategory','openDefeatVoiceCategory']){const button=$(id);button.hidden=false;button.style.setProperty('display','block','important');}
+  voiceModal.hidden=false;voiceModal.style.setProperty('display','flex','important');
+ }catch(error){console.error('追加ボイス画面を開けません',error);alert('追加ボイス画面の表示でエラーが発生しました。ページを再読み込みしてください。');}
+}
+$('openAdditionalVoices').addEventListener('click',openAdditionalVoiceModal);
+voiceSection.addEventListener('click',event=>{const button=event.target.closest('#openAdditionalVoices');if(button){event.preventDefault();openAdditionalVoiceModal();}});
 $('closeVoiceModal').addEventListener('click',()=>{voiceModal.hidden=true;voiceModal.style.display='none';});
 voiceModal.addEventListener('click',e=>{if(e.target===voiceModal){voiceModal.hidden=true;voiceModal.style.display='none';}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!voiceModal.hidden){voiceModal.hidden=true;voiceModal.style.display='none';}});
