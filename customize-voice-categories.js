@@ -92,16 +92,23 @@ $('openAttackVoiceCategory').addEventListener('click',()=>setVoiceCategory('atta
 $('openDefeatVoiceCategory').addEventListener('click',()=>setVoiceCategory('defeat'));
 $('backVoiceCategories').addEventListener('click',backVoiceCategories);
 function openAdditionalVoiceModal(){
- try{
-  for(const key of ['attack','defeat']){const view=categoryViews[key];if(view){view.hidden=true;view.style.setProperty('display','none','important');for(const node of Array.from(view.children)){node.hidden=true;node.style.setProperty('display','none','important');}}}
-  const home=voiceModal.querySelector('#voiceCategoryHome');home.hidden=false;home.style.setProperty('display','grid','important');
-  const back=$('backVoiceCategories');back.hidden=true;back.style.setProperty('display','none','important');
-  for(const id of ['openAttackVoiceCategory','openDefeatVoiceCategory']){const button=$(id);button.hidden=false;button.style.setProperty('display','block','important');}
-  voiceModal.hidden=false;voiceModal.style.setProperty('display','flex','important');
- }catch(error){console.error('追加ボイス画面を開けません',error);alert('追加ボイス画面の表示でエラーが発生しました。ページを再読み込みしてください。');}
+ // Every open starts from the category chooser, never from a stale sub-screen.
+ const home=voiceModal.querySelector('#voiceCategoryHome');
+ home.removeAttribute('hidden');home.hidden=false;home.style.cssText='display:grid!important;grid-template-columns:1fr;gap:12px';
+ for(const id of ['openAttackVoiceCategory','openDefeatVoiceCategory']){
+  const button=$(id);button.removeAttribute('hidden');button.hidden=false;
+  button.style.cssText+=';display:block!important;width:100%;box-sizing:border-box';
+ }
+ for(const key of ['attack','defeat']){
+  const view=categoryViews[key];view.setAttribute('hidden','');view.hidden=true;view.style.cssText='display:none!important;width:100%';
+  for(const node of Array.from(view.children)){node.setAttribute('hidden','');node.hidden=true;node.style.setProperty('display','none','important');}
+  const manager=$(key+'VoiceManager');manager.hidden=true;manager.style.display='none';
+ }
+ const back=$('backVoiceCategories');back.setAttribute('hidden','');back.hidden=true;back.style.cssText+=';display:none!important';
+ voiceModal.removeAttribute('hidden');voiceModal.hidden=false;voiceModal.style.cssText+=';display:flex!important';
 }
 $('openAdditionalVoices').addEventListener('click',openAdditionalVoiceModal);
-voiceSection.addEventListener('click',event=>{const button=event.target.closest('#openAdditionalVoices');if(button){event.preventDefault();openAdditionalVoiceModal();}});
+voiceSection.addEventListener('click',event=>{if(event.target.closest('#openAdditionalVoices')){event.preventDefault();openAdditionalVoiceModal();}});
 $('closeVoiceModal').addEventListener('click',()=>{voiceModal.hidden=true;voiceModal.style.display='none';});
 voiceModal.addEventListener('click',e=>{if(e.target===voiceModal){voiceModal.hidden=true;voiceModal.style.display='none';}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!voiceModal.hidden){voiceModal.hidden=true;voiceModal.style.display='none';}});
