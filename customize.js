@@ -19,13 +19,18 @@ shopGrid.appendChild(panel);
 // 既存ショップの「追加ボイス／準備中」カードそのものを探して置き換える
 const voiceSection=(()=>{
  const byId=$('additionalVoiceShopCard');if(byId)return byId;
- const matches=Array.from(document.querySelectorAll('section,article,div')).filter(el=>{
-  const t=(el.innerText||'').replace(/\\s+/g,' ');
-  return t.includes('追加ボイス')&&t.includes('準備中')&&el.querySelector('button');
- }).sort((x,y)=>(x.innerText||'').length-(y.innerText||'').length);
+ const matches=Array.from(document.querySelectorAll('#shopScreen .shop-item')).filter(el=>{
+  const t=(el.textContent||'').replace(/\\s+/g,' ');
+  return t.includes('追加ボイス');
+ });
  return matches[0]||null;
+})()||(()=>{
+ // 置換が失敗していても、ショップ内に追加ボイス欄を新規作成する
+ const card=document.createElement('section');
+ card.className='shop-item additional-voice-section';
+ shopGrid.appendChild(card);
+ return card;
 })();
-if(!voiceSection)throw new Error('既存の追加ボイス枠が見つかりません');
 voiceSection.id='additionalVoiceShopCard';
 voiceSection.classList.add('additional-voice-section');
 voiceSection.innerHTML='<b>🎙️ 追加ボイス</b><p>攻撃・敗北ボイスを録音・アップロードして、ライブラリからいつでも切り替えできます。</p>';
