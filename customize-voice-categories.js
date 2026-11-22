@@ -189,7 +189,9 @@ async function applyPresetVoice(key,path,label){
    await putMedia(key+'Purchased',true);
    localStorage.setItem('voicePurchased_'+key,'1');
    stage='再生用データの準備';
-   try{await loadCustomAudio();}catch(e){console.warn('Audio preload warning:',e);}
+   await loadCustomAudio();
+   // voice-fix.js 側の再生Audioも保存済みの購入音声で同期的に作り直す
+   if(typeof window.refreshVoiceFixPlayback==='function')await window.refreshVoiceFixPlayback();
    stage='画面の更新';
    await refreshVoiceButtons();
    voiceStatus(label+'を設定しました。ゲームで確認してください。');
@@ -207,8 +209,16 @@ async function applyPresetVoice(key,path,label){
   voiceStatus('設定に失敗しました（'+stage+'）：'+(e&&e.message?e.message:String(e)));
  }
 }
-$('setShamarupiPreset').addEventListener('click',()=>applyPresetVoice('attackVoice','./audio/shamarupi-kansai.mp3.b64','攻撃ボイス'));
-$('setNniPreset').addEventListener('click',()=>applyPresetVoice('defeatVoice','./audio/nni-all.mp3.b64','敗北ボイス'));
+$('setShamarupiPreset').addEventListener('click',async()=>{
+ const button=$('setShamarupiPreset');button.disabled=true;
+ try{await applyPresetVoice('attackVoice','./audio/shamarupi-kansai.mp3.b64','攻撃ボイス');}
+ finally{button.disabled=false;}
+});
+$('setNniPreset').addEventListener('click',async()=>{
+ const button=$('setNniPreset');button.disabled=true;
+ try{await applyPresetVoice('defeatVoice','./audio/nni-all.mp3.b64','敗北ボイス');}
+ finally{button.disabled=false;}
+});
 async function resetActiveVoice(slot){
  const key=activeKeys[slot],libraryKey=libraryNames[slot];
  // 選択中のカスタム音声を削除し、ライブラリ側の「使用中」表示も解除する
