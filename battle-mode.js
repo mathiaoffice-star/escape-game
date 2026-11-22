@@ -289,8 +289,22 @@
   }
   let battleAudio=null,bgmOscillators=[],bgmTimer=null,bgmStep=0;
   let attackVoiceBuffer=null,defeatVoiceBuffer=null;
-  async function loadVoiceBuffer(path){
-    try{const response=await fetch(path+'?v=2',{cache:'force-cache'});if(!response.ok)throw new Error('voice asset fetch failed');
+  async function loadVoiceBuffer(path,key){
+    try{
+      // 通常ゲームと同じユーザー設定音声を優先する
+      if(key){
+        const db=await new Promise((resolve,reject)=>{
+          const req=indexedDB.open('escapeGameCustomMediaV1',3);
+          req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('media'))req.result.createObjectStore('media');};
+          req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+        });
+        const saved=await new Promise((resolve,reject)=>{
+          const req=db.transaction('media','readonly').objectStore('media').get(key);
+          req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error);
+        });
+        if(saved)return await battleAudio.decodeAudioData(await saved.arrayBuffer());
+      }
+      const response=await fetch(path+'?v=4',{cache:'no-store'});if(!response.ok)throw new Error('voice asset fetch failed');
       const encoded=(await response.text()).trim(),raw=atob(encoded),bytes=new Uint8Array(raw.length);
       for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
       return await battleAudio.decodeAudioData(bytes.buffer);
@@ -298,9 +312,10 @@
   }
   async function prepareBattleVoices(){
     startBattleAudio();if(!battleAudio)return;
-    if(!attackVoiceBuffer)attackVoiceBuffer=await loadVoiceBuffer('./audio/shamarupi-attack.mp3.b64');
-    if(!defeatVoiceBuffer)defeatVoiceBuffer=await loadVoiceBuffer('./audio/nnniiii-defeat.mp3.b64');
+    if(!attackVoiceBuffer)attackVoiceBuffer=await loadVoiceBuffer('./audio/shamarupi-kansai.mp3.b64','attackVoice');
+    if(!defeatVoiceBuffer)defeatVoiceBuffer=await loadVoiceBuffer('./audio/nni-all.mp3.b64','defeatVoice');
   }
+  window.addEventListener('customvoicechange',()=>{attackVoiceBuffer=null;defeatVoiceBuffer=null;});
   function playVoiceBuffer(buffer){if(!buffer||!battleAudio)return;try{if(battleAudio.state==='suspended')battleAudio.resume();const source=battleAudio.createBufferSource();source.buffer=buffer;source.connect(battleAudio.destination);source.start()}catch(e){console.warn('voice playback failed',e)}}
   function startBattleAudio(){
     try{
