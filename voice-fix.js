@@ -3,7 +3,7 @@
 // ゲーム本編の攻撃・敗北ボイスは、設定済み音声を優先。
 // 未設定時も、ショップで試聴する高音質プリセットを標準音声として使う。
 const DB='escapeGameCustomMediaV1';
-let attackUrl=null,defeatUrl=null;
+let attackUrl=null,defeatUrl=null,playbackRevision=0;
 const openDB=()=>new Promise((resolve,reject)=>{
  const req=indexedDB.open(DB,3);
  req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('media'))req.result.createObjectStore('media');};
@@ -29,11 +29,14 @@ const makeAudio=(blob)=>{
  return {audio,url};
 };
 async function initPlayback(){
+ const revision=++playbackRevision;
  const [savedAttack,savedDefeat]=await Promise.all([get('attackVoice'),get('defeatVoice')]);
  const [attackBlob,defeatBlob]=await Promise.all([
   savedAttack?Promise.resolve(savedAttack):preset('./audio/shamarupi-attack.mp3.b64'),
   savedDefeat?Promise.resolve(savedDefeat):preset('./audio/nnniiii-defeat.mp3.b64')
  ]);
+ // 古い読み込みが後から完了して新しい設定を上書きしないようにする
+ if(revision!==playbackRevision)return;
  const attack=makeAudio(attackBlob),defeat=makeAudio(defeatBlob);
  if(attackUrl)URL.revokeObjectURL(attackUrl);
  if(defeatUrl)URL.revokeObjectURL(defeatUrl);
@@ -43,7 +46,7 @@ async function initPlayback(){
  console.info('[voice-fix] high-quality game voices ready');
 }
 window.refreshVoiceFixPlayback=()=>initPlayback().catch(e=>console.error('[voice-fix refresh]',e));
-window.addEventListener('customvoicechange',window.refreshVoiceFixPlayback);
+// 音声変更時は設定側のloadCustomAudioからrefreshVoiceFixPlaybackをawaitして呼び出す。
 const baseAttack=window.playAttack;
 if(typeof baseAttack==='function'&&!window.__voiceFixAttackWrapped){
  window.playAttack=function(){
