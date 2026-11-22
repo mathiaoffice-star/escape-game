@@ -190,8 +190,6 @@ async function applyPresetVoice(key,path,label){
    localStorage.setItem('voicePurchased_'+key,'1');
    stage='再生用データの準備';
    await loadCustomAudio();
-   // voice-fix.js 側の再生Audioも保存済みの購入音声で同期的に作り直す
-   if(typeof window.refreshVoiceFixPlayback==='function')await window.refreshVoiceFixPlayback();
    stage='画面の更新';
    await refreshVoiceButtons();
    voiceStatus(label+'を設定しました。ゲームで確認してください。');
@@ -221,17 +219,19 @@ $('setNniPreset').addEventListener('click',async()=>{
 });
 async function resetActiveVoice(slot){
  const key=activeKeys[slot],libraryKey=libraryNames[slot];
- // 選択中のカスタム音声を削除し、ライブラリ側の「使用中」表示も解除する
- await removeMedia(key);
+ // 初期音源そのものをアクティブ領域へ保存し、ゲーム本編・対戦の両方で同じ音源を使う
+ const defaultPath=slot==='attack'?'./audio/shamarupi-attack.mp3.b64':'./audio/nnniiii-defeat.mp3.b64';
+ const defaultBlob=await presetBlob(defaultPath);
+ if(!defaultBlob||!defaultBlob.size)throw new Error('初期ボイスを読み込めませんでした');
+ await putMedia(key,defaultBlob);
  const list=await readLibrary(slot);
  list.forEach(item=>{item.active=false;});
  await putMedia(libraryKey,list);
+ // customvoicechangeイベント経由でvoice-fix側も一度だけ更新する
  await loadCustomAudio();
- // voice-fix.js が持つ再生用Audioも、初期音源で確実に作り直す
- if(typeof window.refreshVoiceFixPlayback==='function')await window.refreshVoiceFixPlayback();
  await renderVoiceLibraries();
  await refreshVoiceButtons();
- voiceStatus((slot==='attack'?'攻撃':'敗北')+'ボイスを初期ボイスに戻しました。');
+ voiceStatus((slot==='attack'?'攻撃':'敗北')+'ボイスを初期ボイスに戻しました。購入状態は保持されています。');
 }
 $('resetAttackPreset').addEventListener('click',async()=>{
  const button=$('resetAttackPreset');button.disabled=true;
