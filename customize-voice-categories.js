@@ -166,8 +166,8 @@ async function refreshVoiceButtons(){
  const [ap,dp,av,dv]=await Promise.all([getMedia('attackVoicePurchased'),getMedia('defeatVoicePurchased'),getMedia('attackVoice'),getMedia('defeatVoice')]);
  $('setShamarupiPreset').textContent=(ap||localStorage.getItem('voicePurchased_attackVoice')==='1')?'設定（購入済み・無料）':'200金の玉で購入';
  $('setNniPreset').textContent=(dp||localStorage.getItem('voicePurchased_defeatVoice')==='1')?'設定（購入済み・無料）':'200金の玉で購入';
- $('resetAttackPreset').style.display=av?'block':'none';
- $('resetDefeatVoice').style.display=dv?'block':'none';
+ $('resetAttackPreset').style.display='block';
+ $('resetDefeatVoice').style.display='block';
 }
 let imageBlob=null,voiceBlob=null,recording=null,recorder=null,voicePreview=null,customVoiceUrl=null,customImageUrl=null,resumeBgmAfterRecording=false;
 const imgInput=$('customPlayerImage'),imgPreview=$('customPlayerPreview'),voiceInput=$('customVoiceFile'),recordBtn=$('recordCustomVoice'),stopBtn=$('stopCustomVoice'),saveVoiceBtn=$('saveCustomVoice'),previewBtn=$('previewCustomVoice'),msg=$('customMediaStatus');
@@ -219,11 +219,9 @@ $('setNniPreset').addEventListener('click',async()=>{
 });
 async function resetActiveVoice(slot){
  const key=activeKeys[slot],libraryKey=libraryNames[slot];
- // 初期音源そのものをアクティブ領域へ保存し、ゲーム本編・対戦の両方で同じ音源を使う
- const defaultPath=slot==='attack'?'./audio/shamarupi-attack.mp3.b64':'./audio/nnniiii-defeat.mp3.b64';
- const defaultBlob=await presetBlob(defaultPath);
- if(!defaultBlob||!defaultBlob.size)throw new Error('初期ボイスを読み込めませんでした');
- await putMedia(key,defaultBlob);
+ // アクティブ音声を削除して、ゲーム標準の初期音源へ戻す
+ // 初期音源は loadCustomAudio / voice-fix 側が標準パスから読み込む
+ await removeMedia(key);
  const list=await readLibrary(slot);
  list.forEach(item=>{item.active=false;});
  await putMedia(libraryKey,list);
