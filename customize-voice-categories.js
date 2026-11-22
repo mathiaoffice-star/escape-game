@@ -209,8 +209,32 @@ async function applyPresetVoice(key,path,label){
 }
 $('setShamarupiPreset').addEventListener('click',()=>applyPresetVoice('attackVoice','./audio/shamarupi-kansai.mp3.b64','攻撃ボイス'));
 $('setNniPreset').addEventListener('click',()=>applyPresetVoice('defeatVoice','./audio/nni-all.mp3.b64','敗北ボイス'));
-$('resetAttackPreset').addEventListener('click',async()=>{await removeMedia('attackVoice');await loadCustomAudio();voiceBlob=null;voiceStatus('攻撃ボイスを初期設定に戻しました。');await refreshVoiceButtons();});
-$('resetDefeatVoice').addEventListener('click',async()=>{await removeMedia('defeatVoice');await loadCustomAudio();voiceStatus('敗北ボイスを初期設定に戻しました。');await refreshVoiceButtons();});
+async function resetActiveVoice(slot){
+ const key=activeKeys[slot],libraryKey=libraryNames[slot];
+ // 選択中のカスタム音声を削除し、ライブラリ側の「使用中」表示も解除する
+ await removeMedia(key);
+ const list=await readLibrary(slot);
+ list.forEach(item=>{item.active=false;});
+ await putMedia(libraryKey,list);
+ await loadCustomAudio();
+ // voice-fix.js が持つ再生用Audioも、初期音源で確実に作り直す
+ if(typeof window.refreshVoiceFixPlayback==='function')await window.refreshVoiceFixPlayback();
+ await renderVoiceLibraries();
+ await refreshVoiceButtons();
+ voiceStatus((slot==='attack'?'攻撃':'敗北')+'ボイスを初期ボイスに戻しました。');
+}
+$('resetAttackPreset').addEventListener('click',async()=>{
+ const button=$('resetAttackPreset');button.disabled=true;
+ try{await resetActiveVoice('attack');}
+ catch(e){console.error('[voice reset] attack failed',e);voiceStatus('攻撃ボイスを戻せませんでした：'+(e.message||e));}
+ finally{button.disabled=false;}
+});
+$('resetDefeatVoice').addEventListener('click',async()=>{
+ const button=$('resetDefeatVoice');button.disabled=true;
+ try{await resetActiveVoice('defeat');}
+ catch(e){console.error('[voice reset] defeat failed',e);voiceStatus('敗北ボイスを戻せませんでした：'+(e.message||e));}
+ finally{button.disabled=false;}
+});
 
 function previewImage(blob){if(customImageUrl)URL.revokeObjectURL(customImageUrl);customImageUrl=URL.createObjectURL(blob);playerImg.src=customImageUrl;imgPreview.src=customImageUrl;imgPreview.style.display='block';}
 async function renderImageLibrary(){
