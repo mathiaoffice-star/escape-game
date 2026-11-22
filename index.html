@@ -125,6 +125,37 @@ for(const src of bootScripts){
   document.body.appendChild(s);
  });
 }
+// 最終フォールバック：追加ボイスの開閉は、個別スクリプトの状態に依存させない。
+function forceOpenVoiceModal(){
+ const modal=document.getElementById('voiceLibraryModal');
+ if(!modal){
+  const status=document.getElementById('shopStatus')||document.getElementById('customMediaStatus');
+  if(status)status.textContent='ボイス画面を初期化できませんでした。ページを再読み込みしてください。';
+  console.error('[voice-modal fallback] modal element missing');
+  return;
+ }
+ modal.hidden=false;
+ modal.style.setProperty('display','flex','important');
+ modal.style.setProperty('visibility','visible','important');
+ modal.style.setProperty('opacity','1','important');
+ modal.style.setProperty('z-index','2147483647','important');
+}
+document.addEventListener('click',event=>{
+ const button=event.target&&event.target.closest?event.target.closest('#openAdditionalVoices'):null;
+ if(!button)return;
+ event.preventDefault();event.stopPropagation();
+ forceOpenVoiceModal();
+},true);
+document.addEventListener('pointerup',event=>{
+ const button=event.target&&event.target.closest?event.target.closest('#openAdditionalVoices'):null;
+ if(!button)return;
+ event.preventDefault();event.stopPropagation();
+ forceOpenVoiceModal();
+},true);
+document.addEventListener('click',event=>{
+ const close=event.target&&event.target.closest?event.target.closest('#closeVoiceModal'):null;
+ if(close){const modal=document.getElementById('voiceLibraryModal');if(modal)modal.style.display='none';}
+},true);
 }catch(error){document.getElementById('status').textContent='読み込みエラー：'+error.message;}
 })();
 </script>
