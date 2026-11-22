@@ -227,7 +227,7 @@ async function resetActiveVoice(slot){
  const list=await readLibrary(slot);
  list.forEach(item=>{item.active=false;});
  await putMedia(libraryKey,list);
- // customvoicechangeイベント経由でvoice-fix側も一度だけ更新する
+ // loadCustomAudio内でvoice-fix側の更新完了まで待つ
  await loadCustomAudio();
  await renderVoiceLibraries();
  await refreshVoiceButtons();
@@ -303,6 +303,8 @@ async function loadCustomAudio(){
  }else{customDefeatAudio=null;if(customDefeatUrl)URL.revokeObjectURL(customDefeatUrl);customDefeatUrl=null;}
  // ゲーム本編・対戦モードにも変更後の音声を即時反映
  window.dispatchEvent(new Event('customvoicechange'));
+ // voice-fix側の読み込み完了まで待ち、古い音声が選択結果を上書きしないようにする
+ if(typeof window.refreshVoiceFixPlayback==='function')await window.refreshVoiceFixPlayback();
 }
 function playCustomAttack(){
  if(!customAttackPool.length)return false;
