@@ -109,7 +109,7 @@ html=html.replace(/ESCAPE GAME/g,'シャマルピー戦争');
  // document.write内にscriptタグを埋め込む方式はiOS Safariで実行順が不安定になるため廃止。
 document.open();document.write(html);document.close();
 const bootScripts=[
- './customize-voice-categories.js?v=34',
+ './customize-voice-categories.js?v=35',
  './stripe-store.js?v=ios-audio2',
  './battle-mode.js?v=35',
  './voice-fix.js?v=high-quality-game-voices-5',
@@ -145,8 +145,52 @@ for(const src of bootScripts){
  entry.className='shop-item';
  entry.style.cssText='grid-column:1 / -1;width:100%;max-width:none;min-width:0;box-sizing:border-box;justify-self:stretch;order:999';
  entry.innerHTML='<strong>🎙️ 追加ボイス</strong><p>購入・試聴・録音・アップロード・ライブラリ設定</p><button id="openAdditionalVoices" type="button">開く</button>';
-})();;
-// 最終フォールバック：追加ボイスの開閉は、個別スクリプトの状態に依存させない。
+})();
+// loaderが入口カードを再生成した後に、必ず新しいボタンへ直接イベントを結び直す
+function bindRestoredVoiceEntry(){
+ const button=document.getElementById('openAdditionalVoices');
+ if(!button||button.dataset.boundAfterRestore==='1')return;
+ button.dataset.boundAfterRestore='1';
+ const open=event=>{
+  if(event){event.preventDefault();event.stopPropagation();}
+  const modal=document.getElementById('voiceLibraryModal');
+  if(!modal){alert('追加ボイス画面の読み込みに失敗しました。ページを再読み込みしてください。');return;}
+  modal.hidden=false;
+  modal.style.setProperty('display','flex','important');
+  modal.style.setProperty('visibility','visible','important');
+  modal.style.setProperty('opacity','1','important');
+  const home=modal.querySelector('#voiceCategoryHome');
+  const back=modal.querySelector('#backVoiceCategories');
+  const attack=modal.querySelector('#attackVoiceCategoryView');
+  const defeat=modal.querySelector('#defeatVoiceCategoryView');
+  if(home)home.style.display='grid';
+  if(back)back.style.display='none';
+  if(attack)attack.style.display='none';
+  if(defeat)defeat.style.display='none';
+ };
+ button.addEventListener('click',open);
+ button.addEventListener('pointerup',event=>{
+  if(event.pointerType==='touch'||event.pointerType==='pen')open(event);
+ });
+ button.disabled=false;
+ button.style.setProperty('pointer-events','auto','important');
+ button.style.setProperty('position','relative','important');
+ button.style.setProperty('z-index','2','important');
+}
+bindRestoredVoiceEntry();
+// 画像カスタマイズ欄をショップ内の見つけやすい位置に戻し、2列からはみ出さないようにする
+(function restoreImageCustomizer(){
+ const grid=document.querySelector('#shopScreen .shop-grid');
+ const panel=grid?.querySelector('.custom-media-panel');
+ if(!grid||!panel)return;
+ panel.style.setProperty('grid-column','1 / -1','important');
+ panel.style.setProperty('width','100%','important');
+ panel.style.setProperty('max-width','none','important');
+ panel.style.setProperty('display','block','important');
+ const voice=grid.querySelector('#additionalVoiceShopCard');
+ if(voice&&voice.nextElementSibling!==panel)voice.after(panel);
+})();
+ // 最終フォールバック：追加ボイスの開閉は、個別スクリプトの状態に依存させない。
 function forceOpenVoiceModal(){
  const modal=document.getElementById('voiceLibraryModal');
  if(!modal){
