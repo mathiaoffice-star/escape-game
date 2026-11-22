@@ -5,6 +5,13 @@
   }
   let feverUntil=0, feverActive=false, feverVoice=null, voiceReady=false;
   const FEVER_MS=5000, FEVER_STEP=10;
+  let nextFeverAt=FEVER_STEP;
+  function checkFeverTrigger(){
+    if(!feverActive && kills>=nextFeverAt){
+      while(nextFeverAt<=kills) nextFeverAt+=FEVER_STEP;
+      startFever();
+    }
+  }
   const voiceUrl='./audio/fever-voice.mp3.b64';
   fetch(voiceUrl).then(r=>{if(!r.ok)throw Error('voice asset missing');return r.text();})
     .then(b64=>{
@@ -21,7 +28,7 @@
   performAttackHit=function(){
     const before=kills;
     originalAttack.apply(this,arguments);
-    if(!feverActive && Math.floor(kills/FEVER_STEP)>Math.floor(before/FEVER_STEP)) startFever();
+    checkFeverTrigger();
   };
   const originalEndGame=endGame;
   endGame=function(){
@@ -30,6 +37,8 @@
   };
   const originalUpdate=update;
   update=function(dt,now){
+    // Fallback trigger: monitor the actual kill counter every frame as well as attack events.
+    checkFeverTrigger();
     originalUpdate.apply(this,arguments);
     if(!feverActive)return;
     if(now>=feverUntil){feverActive=false;return;}
