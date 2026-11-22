@@ -83,15 +83,34 @@
   const originalRender=render;
   render=function(now){
     originalRender.apply(this,arguments);
-    if(!feverActive||gameOver)return;
-    const left=Math.max(0,(feverUntil-now)/1000);
+    if(gameOver)return;
     ctx.save();
+    // Progress toward the next normal-game FEVER milestone.
+    const currentKills=Math.max(0,Number(kills)||0);
+    const progress=Math.max(0,Math.min(1,(currentKills-(nextFeverAt-FEVER_STEP))/FEVER_STEP));
+    const barW=Math.min(230,W*.58), barH=13, barX=(W-barW)/2, barY=H-34;
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.font='900 42px system-ui';ctx.lineWidth=7;ctx.strokeStyle='rgba(255,255,255,.95)';
-    ctx.fillStyle='#ff4fd8';ctx.shadowColor='#ffdf00';ctx.shadowBlur=20;
-    ctx.strokeText('FEVER TIME!!',W/2,145);ctx.fillText('FEVER TIME!!',W/2,145);
-    ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.shadowBlur=10;
-    ctx.strokeText(left.toFixed(1)+'s',W/2,184);ctx.fillText(left.toFixed(1)+'s',W/2,184);
+    ctx.font='bold 14px system-ui';ctx.lineWidth=3;
+    ctx.strokeStyle='rgba(0,0,0,.8)';ctx.fillStyle='#fff';ctx.shadowColor='#000';ctx.shadowBlur=4;
+    const progressLabel='次のFEVERまで '+Math.max(0,Math.min(FEVER_STEP,currentKills-(nextFeverAt-FEVER_STEP)))+'/'+FEVER_STEP;
+    ctx.strokeText(progressLabel,W/2,barY-13);ctx.fillText(progressLabel,W/2,barY-13);
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(15,23,42,.82)';ctx.fillRect(barX,barY,barW,barH);
+    const fillW=barW*progress;
+    if(fillW>0){
+      const grad=ctx.createLinearGradient(barX,barY,barX+barW,barY);
+      grad.addColorStop(0,'#22d3ee');grad.addColorStop(.55,'#a3e635');grad.addColorStop(1,'#facc15');
+      ctx.fillStyle=grad;ctx.fillRect(barX,barY,fillW,barH);
+    }
+    ctx.strokeStyle='rgba(255,255,255,.95)';ctx.lineWidth=2;ctx.strokeRect(barX,barY,barW,barH);
+    if(feverActive&&now<feverUntil){
+      const left=Math.max(0,(feverUntil-now)/1000);
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font='900 42px system-ui';ctx.lineWidth=7;ctx.strokeStyle='rgba(255,255,255,.95)';
+      ctx.fillStyle='#ff4fd8';ctx.shadowColor='#ffdf00';ctx.shadowBlur=20;
+      ctx.strokeText('FEVER TIME!!',W/2,145);ctx.fillText('FEVER TIME!!',W/2,145);
+      ctx.font='bold 24px system-ui';ctx.fillStyle='#fff';ctx.shadowBlur=10;
+      ctx.strokeText(left.toFixed(1)+'s',W/2,184);ctx.fillText(left.toFixed(1)+'s',W/2,184);
+    }
     ctx.restore();
   };
   console.info('[fever] normal-game FEVER mode ready');
