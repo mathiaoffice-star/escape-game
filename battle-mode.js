@@ -276,7 +276,7 @@
     const roomId=state.roomId;
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,state.maxHp);}});
-    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
+    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,followEnemy:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
     state.room.on('broadcast',{event:'damage'},({payload})=>{if(payload?.uid===state.opponent){const damage=clamp(payload.damage||12,1,40);state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');if(state.hp<=0)finish(false);}});
     // Opponent damage is delivered through the dedicated damage broadcast.
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
@@ -334,7 +334,7 @@
     const now=Date.now(),beam=state.weapon==='beam',level=beam?state.beamLevel:state.orbLevel,delay=beam?720:420;if(now-state.lastShot<delay)return;state.lastShot=now;
     const damage=beam?16+level*2:12+level*2;
     playAttackAudio();
-    state.shots.push({x:state.x+state.direction*.045,y:state.y,vx:state.direction*(beam?.03:.025),life:100,beam,level,damage});
+    state.shots.push({x:state.x+state.direction*.045,y:state.y,vx:state.direction*(beam?.03:.025),life:100,beam,followPlayer:beam,level,damage});
     if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x+state.direction*.045,y:state.y,beam,level,damage}});
   }
   function finish(win){
@@ -377,9 +377,10 @@
       state.enemyShots.push({x:state.ex,y:state.ey,vx:dx/len*speed,vy:dy/len*speed,life:100,damage:18,targeted:true});
     }
     for(let i=state.shots.length-1;i>=0;i--){
-      const s=state.shots[i],x0=s.x,y0=s.y;s.x+=s.vx;s.y+=(s.vy||0);s.life--;
-      const radius=s.beam?.075:.065;
-      if(segmentHitsPoint(x0,y0,s.x,s.y,state.ex,state.ey,radius)&&s.life>0){
+      const s=state.shots[i],x0=s.x,y0=s.y;if(s.followPlayer){s.x=state.x+state.direction*.045;s.y=state.y;}else{s.x+=s.vx;s.y+=(s.vy||0);}s.life--;
+      const radius=s.beam?.032:.065;
+      const hit=s.beam?Math.abs(state.ey-s.y)<=radius:segmentHitsPoint(x0,y0,s.x,s.y,state.ex,state.ey,radius);
+      if(hit&&s.life>0){
         state.shots.splice(i,1);
         const damage=clamp(s.damage||12,1,40);state.enemyHp=Math.max(0,state.enemyHp-damage);updateHud();
         if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'damage',payload:{uid:state.user.id,target:state.opponent,damage}});
@@ -389,8 +390,9 @@
       if(s.life<=0||s.x<0||s.x>1||s.y<0||s.y>1)state.shots.splice(i,1);
     }
     for(let i=state.enemyShots.length-1;i>=0;i--){
-      const s=state.enemyShots[i],x0=s.x,y0=s.y;s.x+=s.vx;s.y+=(s.vy||0);s.life--;
-      if(segmentHitsPoint(x0,y0,s.x,s.y,state.x,state.y,.075)&&s.life>0){
+      const s=state.enemyShots[i],x0=s.x,y0=s.y;if(s.followEnemy){s.x=state.ex-state.direction*.045;s.y=state.ey;}else{s.x+=s.vx;s.y+=(s.vy||0);}s.life--;
+      const enemyHit=s.beam?Math.abs(state.y-s.y)<=.032:segmentHitsPoint(x0,y0,s.x,s.y,state.x,state.y,.075);
+      if(enemyHit&&s.life>0){
         state.enemyShots.splice(i,1);
         if(state.mode==='cpu'){
           const damage=clamp(s.damage||18,1,40);state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');
@@ -425,7 +427,7 @@
       ctx.shadowBlur=0;ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0f172a';ctx.strokeText(label,x,y-42);ctx.fillStyle='#fff';ctx.fillText(label,x,y-42);ctx.restore();
     }
     fighter(px,py,'#2563eb','YOU');fighter(ex,ey,'#ef4444',state.opponent==='CPU'?'CPU':'RIVAL');
-    function orb(s){const x=s.x*w,y=s.y*h,level=s.level||0;ctx.save();if(s.beam){const thick=16+level*5,grad=ctx.createLinearGradient(0,y,w,y);grad.addColorStop(0,'rgba(255,255,255,.18)');grad.addColorStop(.12,'rgba(255,255,255,.96)');grad.addColorStop(.88,'rgba(255,255,255,.96)');grad.addColorStop(1,'rgba(255,255,255,.18)');ctx.shadowColor='#fff';ctx.shadowBlur=28+level*6;ctx.fillStyle=grad;ctx.fillRect(0,y-thick/2,w,thick);ctx.shadowBlur=14+level*3;ctx.fillStyle='rgba(255,255,255,.98)';ctx.fillRect(0,y-Math.max(3,thick*.22),w,Math.max(6,thick*.44));ctx.shadowBlur=22;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,7+level*1.2,0,Math.PI*2);ctx.fill();}else{const radius=8+level*2.2;ctx.shadowColor='#fff';ctx.shadowBlur=10+level*2;ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(x,y,radius*1.35,radius,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-radius*.25,y-radius*.25,Math.max(2,radius*.25),0,Math.PI*2);ctx.fill()}ctx.restore()}
+    function orb(s){const x=s.x*w,y=s.y*h,level=s.level||0;ctx.save();if(s.beam){const thick=3.5+level*1.1,grad=ctx.createLinearGradient(0,y,w,y);grad.addColorStop(0,'rgba(255,255,255,.12)');grad.addColorStop(.1,'rgba(255,255,255,.98)');grad.addColorStop(.9,'rgba(255,255,255,.98)');grad.addColorStop(1,'rgba(255,255,255,.12)');ctx.shadowColor='#fff';ctx.shadowBlur=9+level*2;ctx.fillStyle=grad;ctx.fillRect(0,y-thick/2,w,thick);ctx.shadowBlur=4+level;ctx.fillStyle='rgba(255,255,255,.98)';ctx.fillRect(0,y-.8,w,1.6);ctx.shadowBlur=7;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,3+level*.5,0,Math.PI*2);ctx.fill();}else{const radius=8+level*2.2;ctx.shadowColor='#fff';ctx.shadowBlur=10+level*2;ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(x,y,radius*1.35,radius,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-radius*.25,y-radius*.25,Math.max(2,radius*.25),0,Math.PI*2);ctx.fill()}ctx.restore()}
     state.shots.forEach(orb);state.enemyShots.forEach(orb);
   }
   showHome();
