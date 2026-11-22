@@ -31,7 +31,7 @@ const makeAudio=(blob)=>{
 async function initPlayback(){
  const [savedAttack,savedDefeat]=await Promise.all([get('attackVoice'),get('defeatVoice')]);
  const [attackBlob,defeatBlob]=await Promise.all([
-  savedAttack?Promise.resolve(savedAttack):preset('./audio/shamarupi-kansai.mp3.b64'),
+  savedAttack?Promise.resolve(savedAttack):preset('./audio/shamarupi-attack.mp3.b64'),
   savedDefeat?Promise.resolve(savedDefeat):preset('./audio/nnniiii-defeat.mp3.b64')
  ]);
  const attack=makeAudio(attackBlob),defeat=makeAudio(defeatBlob);
