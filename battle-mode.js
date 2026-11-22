@@ -281,7 +281,7 @@
     // Opponent damage is delivered through the dedicated damage broadcast.
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
-  function startCpu(){if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;startBattleAudio();if(state.searchPoll){clearInterval(state.searchPoll);state.searchPoll=null}state.mode='cpu';state.opponent='CPU';state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.hp=state.maxHp;state.enemyHp=state.maxHp;state.shots=[];state.enemyShots=[];$('sw-mode').textContent='CPU戦';updateHud();status('CPU戦開始！');beginGame()}
+  function startCpu(){if(state.mode==='playing'||state.mode==='cpu'||state.mode==='ended')return;startBattleAudio();prepareBattleVoices();if(state.searchPoll){clearInterval(state.searchPoll);state.searchPoll=null}state.mode='cpu';state.opponent='CPU';state.direction=1;state.x=.18;state.y=.5;state.ex=.82;state.ey=.5;state.hp=state.maxHp;state.enemyHp=state.maxHp;state.shots=[];state.enemyShots=[];$('sw-mode').textContent='CPU戦';updateHud();status('CPU戦開始！');beginGame()}
   function clamp(v,a,b){return Math.max(a,Math.min(b,Number(v)||0))}
   function updateHud(){
     $('sw-myhp').textContent=state.hp+' / '+state.maxHp;$('sw-enemyhp').textContent=state.enemyHp+' / '+state.maxHp;
@@ -319,9 +319,10 @@
   function playVoiceBuffer(buffer){if(!buffer||!battleAudio)return;try{if(battleAudio.state==='suspended')battleAudio.resume();const source=battleAudio.createBufferSource();source.buffer=buffer;source.connect(battleAudio.destination);source.start()}catch(e){console.warn('voice playback failed',e)}}
   function startBattleAudio(){
     try{
-      // 対戦中も通常ゲームと同じBGMを使用する
-      if(typeof startBGM==='function')startBGM();
-    }catch(e){console.warn('battle audio unavailable',e)}
+      // 対戦モードはBGMを流さず、攻撃・敗北ボイス専用の音声出力だけを準備する
+      if(!battleAudio){const AudioContextClass=window.AudioContext||window.webkitAudioContext;if(AudioContextClass)battleAudio=new AudioContextClass();}
+      if(battleAudio&&battleAudio.state==='suspended')battleAudio.resume();
+    }catch(e){console.warn('battle voice audio unavailable',e)}
   }
   function playAttackAudio(){startBattleAudio();playVoiceBuffer(attackVoiceBuffer)}
   function segmentHitsPoint(x1,y1,x2,y2,px,py,r){
