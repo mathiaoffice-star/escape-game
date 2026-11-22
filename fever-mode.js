@@ -15,7 +15,7 @@
     }).catch(e=>console.warn('[fever] voice could not load',e));
   function startFever(){
     feverActive=true; feverUntil=performance.now()+FEVER_MS;
-    if(voiceReady&&feverVoice){try{feverVoice.pause();feverVoice.currentTime=0;const p=feverVoice.play();if(p)p.catch(()=>{});}catch(e){}}
+    if(voiceReady&&feverVoice){try{const volume=document.getElementById('voiceVolume');feverVoice.volume=Math.max(0,Math.min(1,Number(volume?.value??100)/100));feverVoice.pause();feverVoice.currentTime=0;const p=feverVoice.play();if(p)p.catch(()=>{});}catch(e){}}
   }
   const originalAttack=performAttackHit;
   performAttackHit=function(){
