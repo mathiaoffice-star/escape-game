@@ -262,6 +262,8 @@ async function loadCustomAudio(){
   customDefeatUrl=URL.createObjectURL(defeatBlob);
   customDefeatAudio=new Audio(customDefeatUrl);customDefeatAudio.preload='auto';customDefeatAudio.volume=volume();
  }else{customDefeatAudio=null;if(customDefeatUrl)URL.revokeObjectURL(customDefeatUrl);customDefeatUrl=null;}
+ // ゲーム本編・対戦モードにも変更後の音声を即時反映
+ window.dispatchEvent(new Event('customvoicechange'));
 }
 function playCustomAttack(){
  if(!customAttackPool.length)return false;
