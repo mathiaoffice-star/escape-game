@@ -90,11 +90,22 @@ $('backVoiceCategories').addEventListener('click',showVoiceChooser);
 $('closeVoiceModal').addEventListener('click',()=>{voiceModal.style.display='none';});
 voiceModal.addEventListener('click',event=>{if(event.target===voiceModal)voiceModal.style.display='none';});
 document.addEventListener('keydown',event=>{if(event.key==='Escape')voiceModal.style.display='none';});
-document.addEventListener('click',event=>{
- const trigger=event.target&&event.target.closest?event.target.closest('#openAdditionalVoices'):null;
- if(!trigger)return;
- event.preventDefault();event.stopPropagation();openAdditionalVoiceModal();
-},true);
+// iOS Safari向け：document委譲ではなく、実ボタンへ直接イベントを登録する。
+const openVoicesButton=$('openAdditionalVoices');
+if(openVoicesButton){
+ const openVoicesNow=event=>{
+  if(event){event.preventDefault();event.stopPropagation();}
+  openAdditionalVoiceModal();
+ };
+ openVoicesButton.addEventListener('click',openVoicesNow);
+ openVoicesButton.addEventListener('pointerup',event=>{
+  if(event.pointerType==='touch'||event.pointerType==='pen'){
+   event.preventDefault();event.stopPropagation();openVoicesNow();
+  }
+ });
+ openVoicesButton.style.pointerEvents='auto';
+ openVoicesButton.disabled=false;
+}
 refreshVoiceButtons();
 
 function voiceStatus(t){const el=$('voiceModalStatus');if(el)el.textContent=t;}
