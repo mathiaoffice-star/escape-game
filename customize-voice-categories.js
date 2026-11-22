@@ -243,6 +243,33 @@ $('resetDefeatVoice').addEventListener('click',async()=>{
  catch(e){console.error('[voice reset] defeat failed',e);voiceStatus('敗北ボイスを戻せませんでした：'+(e.message||e));}
  finally{button.disabled=false;}
 });
+// iOS Safariでも確実に拾えるよう、リセット操作をdocumentのcapture段階で処理する。
+// 既存ボタン側の古いイベントや重複ハンドラに処理を奪われないようにする。
+document.addEventListener('click',async event=>{
+ const button=event.target&&event.target.closest?event.target.closest('#resetAttackPreset,#resetDefeatVoice'):null;
+ if(!button)return;
+ event.preventDefault();
+ event.stopPropagation();
+ if(typeof event.stopImmediatePropagation==='function')event.stopImmediatePropagation();
+ const slot=button.id==='resetAttackPreset'?'attack':'defeat';
+ if(button.dataset.resetBusy==='1')return;
+ button.dataset.resetBusy='1';button.disabled=true;
+ const message=slot==='attack'?'攻撃':'敗北';
+ try{
+  await resetActiveVoice(slot);
+  const text=message+'ボイスを初期ボイスに戻しました。';
+  voiceStatus(text);
+  const shopStatus=$('shopStatus');if(shopStatus)shopStatus.textContent=text;
+ }catch(error){
+  console.error('[voice reset capture] '+slot,error);
+  const text=message+'ボイスを戻せませんでした：'+(error&&error.message?error.message:String(error));
+  voiceStatus(text);
+  const shopStatus=$('shopStatus');if(shopStatus)shopStatus.textContent=text;
+ }finally{
+  button.disabled=false;button.dataset.resetBusy='0';
+ }
+},true);
+
 
 function previewImage(blob){if(customImageUrl)URL.revokeObjectURL(customImageUrl);customImageUrl=URL.createObjectURL(blob);playerImg.src=customImageUrl;imgPreview.src=customImageUrl;imgPreview.style.display='block';}
 async function renderImageLibrary(){
