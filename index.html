@@ -128,23 +128,24 @@ for(const src of bootScripts){
 // ショップの表示を最後に正規化。拡張スクリプトが詳細カードをショップへ残しても入口1枚に戻す。
 (function restoreShopVoiceEntry(){
  const grid=document.querySelector('#shopScreen .shop-grid');if(!grid)return;
- const cards=Array.from(grid.querySelectorAll('.shop-item'));
- let entry=cards.find(card=>(card.textContent||'').includes('追加ボイス'))||null;
+ // 以前のショップと同じ2列グリッドを維持
+ grid.style.setProperty('display','grid','important');
+ grid.style.setProperty('grid-template-columns','repeat(2,minmax(0,1fr))','important');
+ grid.style.setProperty('gap','9px','important');
+ const cards=Array.from(grid.querySelectorAll(':scope > .shop-item'));
+ let entry=cards.find(card=>card.id==='additionalVoiceShopCard')||cards.find(card=>(card.textContent||'').includes('追加ボイス'))||null;
+ // ボイスの詳細カードがショップ直下に残っていたら削除（音声データ・ライブラリには触れない）
  cards.forEach(card=>{
+  if(card===entry)return;
   const t=(card.textContent||'').replace(/\\s+/g,' ');
-  if(/シャマルピー（関西ver）|ンニイイイ（全員ver）/.test(t)&&card!==entry)card.remove();
+  if(/シャマルピー|ンニイイイ|攻撃ボイス|敗北ボイス|登録済み攻撃ボイス|登録済み敗北ボイス/.test(t))card.remove();
  });
- if(!entry){
-  entry=document.createElement('div');entry.className='shop-item';grid.appendChild(entry);
- }
+ if(!entry){entry=document.createElement('div');entry.className='shop-item';grid.appendChild(entry);}
  entry.id='additionalVoiceShopCard';
- entry.style.setProperty('grid-column','1 / -1','important');
- entry.style.setProperty('width','100%','important');
- entry.style.setProperty('max-width','none','important');
- entry.style.setProperty('min-width','0','important');
- entry.style.setProperty('justify-self','stretch','important');
+ entry.className='shop-item';
+ entry.style.cssText='grid-column:1 / -1;width:100%;max-width:none;min-width:0;box-sizing:border-box;justify-self:stretch;order:999';
  entry.innerHTML='<strong>🎙️ 追加ボイス</strong><p>購入・試聴・録音・アップロード・ライブラリ設定</p><button id="openAdditionalVoices" type="button">開く</button>';
-})();
+})();;
 // 最終フォールバック：追加ボイスの開閉は、個別スクリプトの状態に依存させない。
 function forceOpenVoiceModal(){
  const modal=document.getElementById('voiceLibraryModal');
