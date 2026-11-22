@@ -239,14 +239,13 @@ let imageBlob=null,voiceBlob=null,recording=null,recorder=null,voicePreview=null
 const imgInput=$('customPlayerImage'),imgPreview=$('customPlayerPreview'),voiceInput=$('customVoiceFile'),recordBtn=$('recordCustomVoice'),stopBtn=$('stopCustomVoice'),saveVoiceBtn=$('saveCustomVoice'),previewBtn=$('previewCustomVoice'),msg=$('customMediaStatus');
 function msgSet(t){msg.textContent=t;}
 async function presetBlob(path){
- const res=await fetch(path+'?v=4');
+ const res=await fetch(path+'?v=5');
  if(!res.ok)throw new Error('音声ファイルを読み込めません（HTTP '+res.status+'）');
- let b64=(await res.text()).replace(/^\\uFEFF/,'').trim();
- // Base64の改行・空白・data URL・URL-safe表記を正規化してiOS Safariのatob例外を防ぐ
- if(/^data:audio\\/[^;]+;base64,/i.test(b64))b64=b64.slice(b64.indexOf(',')+1);
- b64=b64.replace(/\\s+/g,'').replace(/-/g,'+').replace(/_/g,'/');
- if(!/^[A-Za-z0-9+/]*={0,2}$/.test(b64))throw new Error('音声データにBase64以外の文字が含まれています');
+ let b64=(await res.text()).trim();
+ if(b64.startsWith('data:'))b64=b64.slice(b64.indexOf(',')+1);
+ b64=b64.replace(/\s/g,'').replace(/-/g,'+').replace(/_/g,'/');
  b64=b64.replace(/=+$/,'');
+ if(!/^[A-Za-z0-9+/]*$/.test(b64))throw new Error('音声データにBase64以外の文字が含まれています');
  if(b64.length%4===1)throw new Error('音声データの形式が壊れています');
  b64+='='.repeat((4-b64.length%4)%4);
  let raw;
