@@ -254,7 +254,7 @@ async function loadCustomAudio(){
  // ユーザー設定がない場合も、旧低音質音源ではなく追加ボイス用の高音質MP3を標準音源にする
  const [attackBlob,defeatBlob]=await Promise.all([
   savedAttackBlob||presetBlob('./audio/shamarupi-kansai.mp3.b64'),
-  savedDefeatBlob||null
+  savedDefeatBlob||presetBlob('./audio/nnniiii-defeat.mp3.b64')
  ]);
  const volume=()=>Math.max(0,Math.min(1,(typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice:100)/100));
  if(attackBlob){
