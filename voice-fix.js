@@ -32,14 +32,14 @@ async function initPlayback(){
  const [savedAttack,savedDefeat]=await Promise.all([get('attackVoice'),get('defeatVoice')]);
  const [attackBlob,defeatBlob]=await Promise.all([
   savedAttack?Promise.resolve(savedAttack):preset('./audio/shamarupi-kansai.mp3.b64'),
-  savedDefeat?Promise.resolve(savedDefeat):preset('./audio/nni-all.mp3.b64')
+  savedDefeat?Promise.resolve(savedDefeat):Promise.resolve(null)
  ]);
- const attack=makeAudio(attackBlob),defeat=makeAudio(defeatBlob);
+ const attack=makeAudio(attackBlob),defeat=defeatBlob?makeAudio(defeatBlob):null;
  if(attackUrl)URL.revokeObjectURL(attackUrl);
  if(defeatUrl)URL.revokeObjectURL(defeatUrl);
  attackUrl=attack.url;defeatUrl=defeat.url;
  window.__voiceFixAttack=attack.audio;
- window.__voiceFixDefeat=defeat.audio;
+ window.__voiceFixDefeat=defeat?defeat.audio:null;
  console.info('[voice-fix] high-quality game voices ready');
 }
 window.refreshVoiceFixPlayback=()=>initPlayback().catch(e=>console.error('[voice-fix refresh]',e));
