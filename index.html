@@ -109,7 +109,7 @@ html=html.replace(/ESCAPE GAME/g,'シャマルピー戦争');
  // document.write内にscriptタグを埋め込む方式はiOS Safariで実行順が不安定になるため廃止。
 document.open();document.write(html);document.close();
 const bootScripts=[
- './customize-voice-categories.js?v=27',
+ './customize-voice-categories.js?v=28',
  './stripe-store.js?v=ios-audio2',
  './battle-mode.js?v=35',
  './voice-fix.js?v=high-quality-game-voices-5',
@@ -140,6 +140,20 @@ function forceOpenVoiceModal(){
  modal.style.setProperty('opacity','1','important');
  modal.style.setProperty('z-index','2147483647','important');
 }
+// タッチ開始時点でも画面を切り替える（iOSでclickが抑止される場合の対策）
+document.addEventListener('pointerdown',event=>{
+ const target=event.target&&event.target.closest?event.target.closest('#openAdditionalVoices,#openAttackVoiceCategory,#openDefeatVoiceCategory,#backVoiceCategories,#closeVoiceModal'):null;
+ if(!target)return;
+ if(target.id==='openAdditionalVoices'){forceOpenVoiceModal();return;}
+ const modal=document.getElementById('voiceLibraryModal');if(!modal)return;
+ const home=modal.querySelector('#voiceCategoryHome'),back=modal.querySelector('#backVoiceCategories');
+ const attack=modal.querySelector('#attackVoiceCategoryView'),defeat=modal.querySelector('#defeatVoiceCategoryView');
+ if(target.id==='closeVoiceModal'){modal.style.display='none';return;}
+ if(target.id==='backVoiceCategories'){if(home)home.style.display='grid';if(back)back.style.display='none';if(attack)attack.style.display='none';if(defeat)defeat.style.display='none';return;}
+ if(home)home.style.display='none';if(back)back.style.display='inline-flex';
+ if(attack)attack.style.display=target.id==='openAttackVoiceCategory'?'block':'none';
+ if(defeat)defeat.style.display=target.id==='openDefeatVoiceCategory'?'block':'none';
+},true);
 document.addEventListener('click',event=>{
  const button=event.target&&event.target.closest?event.target.closest('#openAdditionalVoices'):null;
  if(!button)return;
