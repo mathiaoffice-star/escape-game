@@ -47,14 +47,21 @@ voiceModal.style.cssText='display:none;position:fixed;inset:0;z-index:2147483000
 voiceModal.innerHTML='<section style="width:min(100%,560px);max-height:100%;overflow:auto;background:#fff;border-radius:18px;padding:16px;box-sizing:border-box;color:#111827"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px"><strong style="font-size:19px">🎙️ 追加ボイス</strong><button id="closeVoiceModal" type="button" style="padding:7px 12px">閉じる ✕</button></div><div id="voiceModalBody"><div id="voiceCategoryHome" style="display:grid;grid-template-columns:1fr;gap:12px"><button id="openAttackVoiceCategory" type="button" style="padding:20px;font-size:18px">⚔️ 攻撃ボイス</button><button id="openDefeatVoiceCategory" type="button" style="padding:20px;font-size:18px">💥 敗北ボイス</button></div><button id="backVoiceCategories" type="button" style="display:none;margin:0 0 12px;background:#64748b">← ボイス選択に戻る</button></div><p id="voiceModalStatus" role="status" style="font-size:12px;color:#64748b;margin:10px 0 0"></p></section>';
 document.body.appendChild(voiceModal);
 const voiceModalBody=voiceModal.querySelector('#voiceModalBody');
-const voiceGrid=voicePage.querySelector('div > div');
-const sourceCards=Array.from(voiceGrid.children).filter(node=>node.matches('section'));
+// DOM階層に依存しない取得。iOS Safariでも攻撃・敗北カードを確実に拾う
+const sourceCards=Array.from(voicePage.querySelectorAll('section')).filter(node=>
+ node.querySelector('#attackVoiceManager')||node.querySelector('#defeatVoiceManager')
+);
 const categoryViews={};
 for(let index=0;index<2;index++){
  const slot=index===0?'attack':'defeat';
  const presetCard=sourceCards[index];
  const manager=voicePage.querySelector('#'+slot+'VoiceManager');
- if(!presetCard||!manager)throw new Error('ボイスカードの初期化に失敗: '+slot);
+ if(!presetCard||!manager){
+  const status=$('voiceModalStatus');
+  if(status)status.textContent=(slot==='attack'?'攻撃':'敗北')+'ボイス画面の初期化に失敗しました。再読み込みしてください。';
+  console.error('[voice category init] missing card or manager',slot,{presetCard,manager,sourceCards:sourceCards.length});
+  continue;
+ }
  const oldCustomButton=presetCard.querySelector('#'+(slot==='attack'?'chooseMyAttackVoice':'chooseMyDefeatVoice'));
  if(oldCustomButton)oldCustomButton.remove();
  const heading=presetCard.querySelector('h3');if(heading)heading.remove();
