@@ -84,10 +84,25 @@ function showVoiceCategory(slot){
  renderVoiceLibraries();
 }
 function openAdditionalVoiceModal(){showVoiceChooser();voiceModal.style.display='flex';}
-$('openAttackVoiceCategory').addEventListener('click',()=>showVoiceCategory('attack'));
-$('openDefeatVoiceCategory').addEventListener('click',()=>showVoiceCategory('defeat'));
-$('backVoiceCategories').addEventListener('click',showVoiceChooser);
-$('closeVoiceModal').addEventListener('click',()=>{voiceModal.style.display='none';});
+// iOS Safari対策：カテゴリ遷移はclick/pointerupの両方で直接処理し、二重実行を抑止
+function bindVoiceNav(id,action){
+ const button=$(id);if(!button)return;
+ let lastRun=0;
+ const run=event=>{
+  const now=Date.now();if(now-lastRun<350)return;lastRun=now;
+  if(event){event.preventDefault();event.stopPropagation();}
+  action();
+ };
+ button.addEventListener('click',run);
+ button.addEventListener('pointerup',event=>{
+  if(event.pointerType==='touch'||event.pointerType==='pen')run(event);
+ });
+ button.style.pointerEvents='auto';button.disabled=false;
+}
+bindVoiceNav('openAttackVoiceCategory',()=>showVoiceCategory('attack'));
+bindVoiceNav('openDefeatVoiceCategory',()=>showVoiceCategory('defeat'));
+bindVoiceNav('backVoiceCategories',showVoiceChooser);
+bindVoiceNav('closeVoiceModal',()=>{voiceModal.style.display='none';});
 voiceModal.addEventListener('click',event=>{if(event.target===voiceModal)voiceModal.style.display='none';});
 document.addEventListener('keydown',event=>{if(event.key==='Escape')voiceModal.style.display='none';});
 // iOS Safari向け：document委譲ではなく、実ボタンへ直接イベントを登録する。
@@ -284,15 +299,37 @@ document.addEventListener('click',async event=>{
 
 function previewImage(blob){if(customImageUrl)URL.revokeObjectURL(customImageUrl);customImageUrl=URL.createObjectURL(blob);playerImg.src=customImageUrl;imgPreview.src=customImageUrl;imgPreview.style.display='block';}
 async function renderImageLibrary(){
- const host=$('playerImageLibrary');if(!host)return;const list=(await getMedia('playerImageLibrary'))||[];const activeId=await getMedia('playerImageActiveId');
+ const host=$('playerImageLibrary');if(!host)return;
+ const list=(await getMedia('playerImageLibrary'))||[];
+ const activeId=await getMedia('playerImageActiveId');
+ // 再描画前に、このライブラリが作った古いURLだけを解放
+ (host._imageUrls||[]).forEach(url=>URL.revokeObjectURL(url));host._imageUrls=[];
  host.innerHTML='';
- if(!list.length){host.textContent='登録した画像はまだありません。';host.style.color='#94a3b8';return;}
+ if(!list.length){
+  host.textContent='登録した画像はまだありません。画像を選んで「200金の玉で登録」を押すと、ここに表示されます。';
+  host.style.cssText='display:block;color:#64748b;font-size:13px;padding:10px;border:1px dashed #cbd5e1;border-radius:10px';
+  return;
+ }
+ host.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:9px;width:100%;min-width:0';
  list.forEach((item,index)=>{
-  const card=document.createElement('div');card.style.cssText='border:1px solid #dbe1ea;border-radius:12px;padding:7px;background:#f8fafc;text-align:center;min-width:0';
-  const img=document.createElement('img');img.src=URL.createObjectURL(item.blob);img.alt='保存画像 '+(index+1);img.style.cssText='width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px';
-  const active=document.createElement('div');active.textContent=activeId===item.id?'✓ 使用中':'保存済み';active.style.cssText='font-size:11px;color:#64748b;margin:4px 0';
-  const choose=document.createElement('button');choose.type='button';choose.textContent='この画像に設定';choose.style.cssText='width:100%;font-size:11px;padding:7px 3px';choose.addEventListener('click',async()=>{await putMedia('playerImage',item.blob);await putMedia('playerImageActiveId',item.id);previewImage(item.blob);await renderImageLibrary();msgSet('保存済み画像に変更しました。');});
-  card.append(img,active,choose);host.appendChild(card);
+  if(!item||!item.blob)return;
+  const card=document.createElement('div');card.style.cssText='border:1px solid #dbe1ea;border-radius:12px;padding:7px;background:#f8fafc;text-align:center;min-width:0;overflow:hidden';
+  const url=URL.createObjectURL(item.blob);host._imageUrls.push(url);
+  const img=document.createElement('img');img.src=url;img.alt='保存画像 '+(index+1);img.style.cssText='display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#e2e8f0';
+  const active=document.createElement('div');active.textContent=activeId===item.id?'✓ 使用中':'保存済み';active.style.cssText='font-size:11px;color:'+(activeId===item.id?'#15803d':'#64748b')+';font-weight:700;margin:6px 0';
+  const choose=document.createElement('button');choose.type='button';choose.textContent=activeId===item.id?'設定中':'この画像に設定';choose.disabled=activeId===item.id;choose.style.cssText='width:100%;font-size:11px;padding:7px 3px;margin-bottom:5px';choose.addEventListener('click',async()=>{
+   try{await putMedia('playerImage',item.blob);await putMedia('playerImageActiveId',item.id);previewImage(item.blob);await renderImageLibrary();msgSet('保存済み画像に変更しました。');}
+   catch(error){msgSet('画像の設定に失敗しました：'+(error.message||error));}
+  });
+  const del=document.createElement('button');del.type='button';del.textContent='削除';del.style.cssText='width:100%;font-size:11px;padding:6px 3px;background:#64748b';del.addEventListener('click',async()=>{
+   if(!confirm('この画像をライブラリから削除しますか？'))return;
+   try{
+    await putMedia('playerImageLibrary',list.filter(x=>x.id!==item.id));
+    if(activeId===item.id){await removeMedia('playerImage');await removeMedia('playerImageActiveId');playerImg.src=ASSETS.player;if(customImageUrl){URL.revokeObjectURL(customImageUrl);customImageUrl=null;}}
+    await renderImageLibrary();msgSet('画像をライブラリから削除しました。');
+   }catch(error){msgSet('画像の削除に失敗しました：'+(error.message||error));}
+  });
+  card.append(img,active,choose,del);host.appendChild(card);
  });
 }
 
