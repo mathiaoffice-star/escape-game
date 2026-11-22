@@ -109,7 +109,7 @@ html=html.replace(/ESCAPE GAME/g,'シャマルピー戦争');
  // document.write内にscriptタグを埋め込む方式はiOS Safariで実行順が不安定になるため廃止。
 document.open();document.write(html);document.close();
 const bootScripts=[
- './customize-voice-categories.js?v=28',
+ './customize-voice-categories.js?v=29',
  './stripe-store.js?v=ios-audio2',
  './battle-mode.js?v=35',
  './voice-fix.js?v=high-quality-game-voices-5',
@@ -153,6 +153,10 @@ document.addEventListener('pointerdown',event=>{
  if(home)home.style.display='none';if(back)back.style.display='inline-flex';
  if(attack)attack.style.display=target.id==='openAttackVoiceCategory'?'block':'none';
  if(defeat)defeat.style.display=target.id==='openDefeatVoiceCategory'?'block':'none';
+ if(target.id==='openAttackVoiceCategory'&&!attack||target.id==='openDefeatVoiceCategory'&&!defeat){
+  const status=modal.querySelector('#voiceModalStatus');
+  if(status)status.textContent='ボイス画面の読み込みに失敗しました。ページを再読み込みしてください。';
+ }
 },true);
 document.addEventListener('click',event=>{
  const button=event.target&&event.target.closest?event.target.closest('#openAdditionalVoices'):null;
