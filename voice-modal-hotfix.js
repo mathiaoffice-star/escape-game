@@ -5,6 +5,54 @@ async function dbGet(k){const d=await dbOpen();return new Promise((ok,no)=>{cons
 async function dbPut(k,v){const d=await dbOpen();return new Promise((ok,no)=>{const t=d.transaction('media','readwrite');t.objectStore('media').put(v,k);t.oncomplete=ok;t.onerror=()=>no(t.error);});}
 async function presetBlob(path){const r=await fetch(path+'?v=3');if(!r.ok)throw Error('音声データを取得できません');const b=atob((await r.text()).trim()),a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return new Blob([a],{type:'audio/mpeg'});}
 function status(t){const el=$('voiceModalStatus');if(el)el.textContent=t;}
+
+// 敗北プリセットの試聴は、iOS Safariでもタップ直後にplay()できるよう事前ロードする。
+// 既存の非同期fetch→play()方式だと、ユーザー操作の許可が失効して再生できない場合がある。
+let defeatPreviewAudio=null,defeatPreviewUrl=null,defeatPreviewReady=false,defeatPreviewError=null;
+const defeatPreviewLoad=(async()=>{
+ try{
+  const blob=await presetBlob('./audio/nni-all.mp3.b64');
+  if(!blob||!blob.size)throw new Error('音声データが空です');
+  defeatPreviewUrl=URL.createObjectURL(blob);
+  defeatPreviewAudio=new Audio(defeatPreviewUrl);
+  defeatPreviewAudio.preload='auto';
+  defeatPreviewAudio.playsInline=true;
+  defeatPreviewAudio.volume=1;
+  await new Promise((resolve,reject)=>{
+   if(defeatPreviewAudio.readyState>=2){resolve();return;}
+   const done=()=>{cleanup();resolve();},fail=()=>{cleanup();reject(new Error('音声を読み込めません'));};
+   const cleanup=()=>{defeatPreviewAudio.removeEventListener('canplay',done);defeatPreviewAudio.removeEventListener('error',fail);};
+   defeatPreviewAudio.addEventListener('canplay',done,{once:true});
+   defeatPreviewAudio.addEventListener('error',fail,{once:true});
+   defeatPreviewAudio.load();
+  });
+  defeatPreviewReady=true;
+ }catch(e){defeatPreviewError=e;console.error('[voice preview] defeat preload failed',e);}
+})();
+function playDefeatPresetPreview(){
+ const button=$('previewNniPreset');
+ if(!defeatPreviewReady||!defeatPreviewAudio){
+  status(defeatPreviewError?'敗北ボイスを読み込めません：'+defeatPreviewError.message:'敗北ボイスを準備中です。少し待ってもう一度押してください。');
+  return;
+ }
+ try{
+  const volume=typeof audioPrefs!=='undefined'&&audioPrefs?Number(audioPrefs.voice)/100:1;
+  defeatPreviewAudio.volume=Math.max(0,Math.min(1,Number.isFinite(volume)?volume:1));
+  defeatPreviewAudio.pause();
+  defeatPreviewAudio.currentTime=0;
+  const result=defeatPreviewAudio.play();
+  if(result&&typeof result.catch==='function')result.catch(e=>{status('試聴を開始できません：'+e.message);});
+  status('敗北ボイスを再生中…');
+ }catch(e){status('試聴できません：'+e.message);}
+}
+document.addEventListener('click',event=>{
+ const button=event.target&&event.target.closest?event.target.closest('#previewNniPreset'):null;
+ if(!button)return;
+ event.preventDefault();
+ event.stopPropagation();
+ event.stopImmediatePropagation();
+ playDefeatPresetPreview();
+},true);
 async function charge(cost,label,done){
  if(typeof window.chargeGameCoins==='function'){window.chargeGameCoins(cost,label,done);return;}
  if(typeof window.wallet==='number'&&window.wallet>=cost&&typeof window.saveWallet==='function'){window.wallet-=cost;window.saveWallet();if(typeof window.updateShopUI==='function')window.updateShopUI();await done();return;}
