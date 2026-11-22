@@ -34,7 +34,13 @@ const voiceSection=(()=>{
 voiceSection.id='additionalVoiceShopCard';
 voiceSection.classList.add('additional-voice-section');
 // ショップの2カラム配置でも、追加ボイス欄は画面幅いっぱいに展開する
-voiceSection.style.cssText+=';grid-column:1/-1;width:100%;max-width:none;min-width:0;box-sizing:border-box';
+voiceSection.style.setProperty('grid-column','1 / -1','important');
+voiceSection.style.setProperty('width','100%','important');
+voiceSection.style.setProperty('max-width','none','important');
+voiceSection.style.setProperty('min-width','0','important');
+voiceSection.style.setProperty('box-sizing','border-box','important');
+voiceSection.style.setProperty('justify-self','stretch','important');
+voiceSection.style.setProperty('order','999','important');
 voiceSection.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><b style="font-size:17px">🎙️ 追加ボイス</b><p style="margin:4px 0 0;color:#64748b;font-size:13px">購入・試聴・録音・アップロード・ライブラリ設定</p></div><button id="openAdditionalVoices" type="button" style="white-space:nowrap;padding:11px 18px">開く</button></div>';
 const voicePage=document.createElement('div');
 voicePage.id='additionalVoicesPage';
