@@ -56,7 +56,8 @@
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i];
       if(Math.hypot(player.x-e.x,player.y-e.y)<(playerSize+enemySize)*.43){
-        enemies.splice(i,1);kills++;
+        enemies.splice(i,1);
+        // FEVER bonus defeats do not contribute to the normal kill counter.
         spawnDefeatEffect(e.x,e.y);
         coinDrops.push({x:e.x,y:e.y,vx:0,vy:0,life:6000,value:10,kind:'enemy'});
       }
