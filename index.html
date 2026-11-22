@@ -153,8 +153,26 @@ document.addEventListener('pointerup',event=>{
  forceOpenVoiceModal();
 },true);
 document.addEventListener('click',event=>{
- const close=event.target&&event.target.closest?event.target.closest('#closeVoiceModal'):null;
- if(close){const modal=document.getElementById('voiceLibraryModal');if(modal)modal.style.display='none';}
+ const target=event.target&&event.target.closest?event.target.closest('#openAttackVoiceCategory,#openDefeatVoiceCategory,#backVoiceCategories,#closeVoiceModal'):null;
+ if(!target)return;
+ const modal=document.getElementById('voiceLibraryModal');
+ if(!modal)return;
+ const home=modal.querySelector('#voiceCategoryHome');
+ const back=modal.querySelector('#backVoiceCategories');
+ const attack=modal.querySelector('#attackVoiceCategoryView');
+ const defeat=modal.querySelector('#defeatVoiceCategoryView');
+ if(target.id==='closeVoiceModal'){modal.style.display='none';return;}
+ if(target.id==='backVoiceCategories'){
+  if(home)home.style.display='grid';
+  if(back)back.style.display='none';
+  if(attack)attack.style.display='none';
+  if(defeat)defeat.style.display='none';
+  return;
+ }
+ if(home)home.style.display='none';
+ if(back)back.style.display='inline-flex';
+ if(attack)attack.style.display=target.id==='openAttackVoiceCategory'?'block':'none';
+ if(defeat)defeat.style.display=target.id==='openDefeatVoiceCategory'?'block':'none';
 },true);
 }catch(error){document.getElementById('status').textContent='読み込みエラー：'+error.message;}
 })();
