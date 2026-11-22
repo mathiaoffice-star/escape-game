@@ -42,6 +42,19 @@ voiceSection.style.setProperty('box-sizing','border-box','important');
 voiceSection.style.setProperty('justify-self','stretch','important');
 voiceSection.style.setProperty('order','999','important');
 voiceSection.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div><b style="font-size:17px">🎙️ 追加ボイス</b><p style="margin:4px 0 0;color:#64748b;font-size:13px">購入・試聴・録音・アップロード・ライブラリ設定</p></div><button id="openAdditionalVoices" type="button" style="white-space:nowrap;padding:11px 18px">開く</button></div>';
+// ショップ内に誤って露出したプリセット詳細カードを除去し、一覧には入口カードだけを残す
+Array.from(document.querySelectorAll('#shopScreen .shop-item')).forEach(card=>{
+ if(card===voiceSection)return;
+ const text=(card.textContent||'').replace(/\\s+/g,' ');
+ const isPresetCard=/シャマルピー（関西ver）|ンニイイイ（全員ver）/.test(text);
+ if(isPresetCard)card.remove();
+});
+voiceSection.style.setProperty('grid-column','1 / -1','important');
+voiceSection.style.setProperty('width','100%','important');
+voiceSection.style.setProperty('max-width','none','important');
+voiceSection.style.setProperty('justify-self','stretch','important');
+voiceSection.style.setProperty('order','999','important');
+
 const voicePage=document.createElement('div');
 voicePage.id='additionalVoicesPage';
 voicePage.style.cssText='display:block;position:static;background:transparent;color:#111827;overflow:visible;padding:0;box-sizing:border-box;font-family:inherit;width:100%;max-width:none;min-width:0';
