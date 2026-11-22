@@ -6,11 +6,21 @@
   let feverUntil=0, feverActive=false, feverVoice=null, voiceReady=false;
   const FEVER_MS=5000, FEVER_STEP=10;
   let nextFeverAt=FEVER_STEP;
+  let lastKills=0;
   function checkFeverTrigger(){
-    if(!feverActive && kills>=nextFeverAt){
-      while(nextFeverAt<=kills) nextFeverAt+=FEVER_STEP;
-      startFever();
+    const currentKills=Math.max(0,Number(kills)||0);
+    // A new run resets kills to zero. Reset the milestone tracker too,
+    // otherwise later runs can miss the 10th/20th/30th-kill FEVER trigger.
+    if(currentKills<lastKills){
+      nextFeverAt=(Math.floor(currentKills/FEVER_STEP)+1)*FEVER_STEP;
     }
+    // Process every crossed milestone, including milestones reached during FEVER.
+    // startFever extends the active timer by five seconds for each milestone.
+    while(currentKills>=nextFeverAt){
+      startFever();
+      nextFeverAt+=FEVER_STEP;
+    }
+    lastKills=currentKills;
   }
   const voiceUrl='./audio/fever-voice.mp3.b64';
   fetch(voiceUrl).then(r=>{if(!r.ok)throw Error('voice asset missing');return r.text();})
