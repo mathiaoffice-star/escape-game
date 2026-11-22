@@ -277,7 +277,7 @@ async function loadCustomAudio(){
  const [savedAttackBlob,savedDefeatBlob]=await Promise.all([getMedia('attackVoice'),getMedia('defeatVoice')]);
  // ユーザー設定がない場合も、旧低音質音源ではなく追加ボイス用の高音質MP3を標準音源にする
  const [attackBlob,defeatBlob]=await Promise.all([
-  savedAttackBlob||presetBlob('./audio/shamarupi-kansai.mp3.b64'),
+  savedAttackBlob||presetBlob('./audio/shamarupi-attack.mp3.b64'),
   savedDefeatBlob||presetBlob('./audio/nnniiii-defeat.mp3.b64')
  ]);
  const volume=()=>Math.max(0,Math.min(1,(typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice:100)/100));
