@@ -48,14 +48,12 @@ voiceModal.innerHTML='<section style="width:min(100%,560px);max-height:100%;over
 document.body.appendChild(voiceModal);
 const voiceModalBody=voiceModal.querySelector('#voiceModalBody');
 // DOM階層に依存しない取得。iOS Safariでも攻撃・敗北カードを確実に拾う
-const sourceCards=Array.from(voicePage.querySelectorAll('section')).filter(node=>
- node.querySelector('#attackVoiceManager')||node.querySelector('#defeatVoiceManager')
-);
 const categoryViews={};
 for(let index=0;index<2;index++){
  const slot=index===0?'attack':'defeat';
- const presetCard=sourceCards[index];
  const manager=voicePage.querySelector('#'+slot+'VoiceManager');
+ // 各カテゴリの管理パネルから親カードを直接取得。配列順・DOM階層に依存しない
+ const presetCard=manager?manager.closest('section'):null;
  if(!presetCard||!manager){
   const status=$('voiceModalStatus');
   if(status)status.textContent=(slot==='attack'?'攻撃':'敗北')+'ボイス画面の初期化に失敗しました。再読み込みしてください。';
