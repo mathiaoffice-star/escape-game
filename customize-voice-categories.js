@@ -57,12 +57,28 @@ for(let index=0;index<2;index++){
  if(!presetCard||!manager){
   const status=$('voiceModalStatus');
   if(status)status.textContent=(slot==='attack'?'攻撃':'敗北')+'ボイス画面の初期化に失敗しました。再読み込みしてください。';
-  console.error('[voice category init] missing card or manager',slot,{presetCard,manager,sourceCards:sourceCards.length});
+  console.error('[voice category init] missing card or manager',slot,{presetCard,manager});
   continue;
  }
  const oldCustomButton=presetCard.querySelector('#'+(slot==='attack'?'chooseMyAttackVoice':'chooseMyDefeatVoice'));
  if(oldCustomButton)oldCustomButton.remove();
- const heading=presetCard.querySelector('h3');if(heading)heading.remove();
+ // プリセット音源カードの見出し・試聴・設定ボタンを必ず表示
+ const heading=presetCard.querySelector('h3');
+ if(heading){heading.textContent=slot==='attack'?'⚔️ 攻撃ボイス':'💥 敗北ボイス';heading.style.cssText='display:block;font-size:17px;margin:0 0 6px;color:#111827';}
+ const previewId=slot==='attack'?'previewShamarupiPreset':'previewNniPreset';
+ let previewButton=presetCard.querySelector('#'+previewId);
+ if(!previewButton){
+  previewButton=document.createElement('button');previewButton.id=previewId;previewButton.type='button';
+  previewButton.textContent='▶ 試聴';
+  previewButton.addEventListener('click',()=>previewPreset(slot==='attack'?'./audio/shamarupi-kansai.mp3.b64':'./audio/nni-all.mp3.b64'));
+  const controls=presetCard.querySelector('div[style*="grid-template-columns"]')||presetCard;
+  controls.insertBefore(previewButton,controls.firstChild);
+ }
+ previewButton.textContent='▶ 試聴';previewButton.hidden=false;previewButton.style.cssText='display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;min-height:44px;align-items:center;justify-content:center';
+ const presetLabel=presetCard.querySelector('p');
+ if(presetLabel){presetLabel.style.cssText='display:block;color:#64748b;font-size:13px;margin:0 0 8px';}
+ const setButton=presetCard.querySelector(slot==='attack'?'#setShamarupiPreset':'#setNniPreset');
+ if(setButton){setButton.hidden=false;setButton.style.cssText+=';display:inline-flex!important;visibility:visible!important;opacity:1!important;min-height:44px';}
  presetCard.style.cssText='display:block;margin:0 0 10px;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box;width:100%';
  const customCard=document.createElement('section');
  customCard.style.cssText='display:block;margin:0;padding:14px;border:1px solid #dbe1ea;border-radius:14px;background:#fff;box-sizing:border-box;width:100%';
