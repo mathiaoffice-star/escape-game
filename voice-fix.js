@@ -1,35 +1,60 @@
-(()=> {
+(()=>{
 'use strict';
-// 追加ボイスの画面UIは customize.js がショップ内に構築する。
-// このファイルはプリセット音声の再生処理だけを担当し、ショップDOMを書き換えない。
-const db=()=>new Promise((resolve,reject)=>{
- const q=indexedDB.open('escapeGameCustomMediaV1',3);
- q.onupgradeneeded=()=>{if(!q.result.objectStoreNames.contains('media'))q.result.createObjectStore('media');};
- q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);
+// ゲーム本編の攻撃・敗北ボイスは、設定済み音声を優先。
+// 未設定時も、ショップで試聴する高音質プリセットを標準音声として使う。
+const DB='escapeGameCustomMediaV1';
+let attackUrl=null,defeatUrl=null;
+const openDB=()=>new Promise((resolve,reject)=>{
+ const req=indexedDB.open(DB,3);
+ req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('media'))req.result.createObjectStore('media');};
+ req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
 });
-const get=async key=>{const d=await db();return new Promise((resolve,reject)=>{
- const q=d.transaction('media','readonly').objectStore('media').get(key);
- q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error);
-});};
-const load=async path=>{
- const r=await fetch(path+'?v=voice-playback-8',{cache:'no-store'});
- if(!r.ok)throw Error('音声取得失敗 '+r.status);
- const raw=atob((await r.text()).trim()),bytes=new Uint8Array(raw.length);
+const get=async key=>{
+ const d=await openDB();
+ return new Promise((resolve,reject)=>{
+  const req=d.transaction('media','readonly').objectStore('media').get(key);
+  req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error);
+ });
+};
+const preset=async path=>{
+ const response=await fetch(path+'?v=4',{cache:'no-store'});
+ if(!response.ok)throw new Error('音声取得失敗 '+response.status);
+ const raw=atob((await response.text()).trim()),bytes=new Uint8Array(raw.length);
  for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
  return new Blob([bytes],{type:'audio/mpeg'});
 };
+const makeAudio=(blob)=>{
+ const url=URL.createObjectURL(blob),audio=new Audio(url);
+ audio.preload='auto';audio.playsInline=true;
+ return {audio,url};
+};
 async function initPlayback(){
- const [attack,defeat]=await Promise.all([get('attackVoice'),get('defeatVoice')]);
- window.__voiceFixAttack=attack?new Audio(URL.createObjectURL(attack)):null;
- window.__voiceFixDefeat=defeat?new Audio(URL.createObjectURL(defeat)):null;
+ const [savedAttack,savedDefeat]=await Promise.all([get('attackVoice'),get('defeatVoice')]);
+ const [attackBlob,defeatBlob]=await Promise.all([
+  savedAttack?Promise.resolve(savedAttack):preset('./audio/shamarupi-kansai.mp3.b64'),
+  savedDefeat?Promise.resolve(savedDefeat):preset('./audio/nni-all.mp3.b64')
+ ]);
+ const attack=makeAudio(attackBlob),defeat=makeAudio(defeatBlob);
+ if(attackUrl)URL.revokeObjectURL(attackUrl);
+ if(defeatUrl)URL.revokeObjectURL(defeatUrl);
+ attackUrl=attack.url;defeatUrl=defeat.url;
+ window.__voiceFixAttack=attack.audio;
+ window.__voiceFixDefeat=defeat.audio;
+ console.info('[voice-fix] high-quality game voices ready');
 }
+window.refreshVoiceFixPlayback=()=>initPlayback().catch(e=>console.error('[voice-fix refresh]',e));
+window.addEventListener('customvoicechange',window.refreshVoiceFixPlayback);
 const baseAttack=window.playAttack;
 if(typeof baseAttack==='function'&&!window.__voiceFixAttackWrapped){
  window.playAttack=function(){
   if(window.__escapeMasterMute)return;
-  const a=window.__voiceFixAttack;
-  if(!a){baseAttack();return;}
-  try{a.volume=typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice/100:1;a.pause();a.currentTime=0;a.play().catch(()=>{});}catch(e){}
+  const audio=window.__voiceFixAttack;
+  if(!audio){baseAttack();return;}
+  try{
+   audio.volume=typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice/100:1;
+   audio.pause();audio.currentTime=0;
+   const result=audio.play();if(result&&result.catch)result.catch(()=>{});
+  }catch(e){console.warn('[voice-fix] attack playback failed',e);}
  };
  window.__voiceFixAttackWrapped=true;
 }
@@ -37,14 +62,17 @@ const baseEnd=window.endGame;
 if(typeof baseEnd==='function'&&!window.__voiceFixEndWrapped){
  window.endGame=function(){
   if(gameOver)return;
-  const a=window.__voiceFixDefeat;
-  if(!a){baseEnd();return;}
+  const audio=window.__voiceFixDefeat;
+  if(!audio){baseEnd();return;}
   if(window.__escapeMasterMute){baseEnd();return;}
   gameOver=true;bgmAudio.pause();bgmStarted=false;
-  try{a.volume=typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice/100:1;a.pause();a.currentTime=0;a.play().catch(()=>{});}catch(e){}
+  try{
+   audio.volume=typeof audioPrefs!=='undefined'&&audioPrefs?audioPrefs.voice/100:1;
+   audio.pause();audio.currentTime=0;
+   const result=audio.play();if(result&&result.catch)result.catch(()=>{});
+  }catch(e){console.warn('[voice-fix] defeat playback failed',e);}
  };
  window.__voiceFixEndWrapped=true;
 }
 initPlayback().catch(e=>console.error('[voice-fix preload]',e));
-console.info('[voice-fix] playback initialized; shop UI remains managed by customize.js');
 })();
