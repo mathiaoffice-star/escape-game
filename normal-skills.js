@@ -156,15 +156,20 @@
       setStatus('⏳ 賢者タイム発動！ 敵の動きが遅くなった');
     } else if (key === 'whiteBeam') {
       beamUntil = now + 420;
-      const width = 10 + level * 7;
-      const targets = [];
-      enemies.forEach((e, index) => {
-        if (Math.abs(e.x-player.x) <= width || Math.abs(e.y-player.y) <= width) targets.push({e,index});
-      });
-      targets.sort((a,b)=>b.index-a.index).forEach(({e,index}) => {
-        enemies.splice(index,1); addDefeat(e);
-      });
-      setStatus('✨ 4方向ビーム！ ' + targets.length + '体に命中！');
+      // ビームの当たり判定を見た目に合わせて広げ、上下左右の射線上の敵を確実に撃破
+      const width = 28 + level * 10;
+      let defeated = 0;
+      for (let i = enemies.length - 1; i >= 0; i--) {
+        const e = enemies[i];
+        const hitHorizontal = Math.abs(e.y - player.y) <= width;
+        const hitVertical = Math.abs(e.x - player.x) <= width;
+        if (hitHorizontal || hitVertical) {
+          enemies.splice(i, 1);
+          addDefeat(e);
+          defeated++;
+        }
+      }
+      setStatus('✨ 4方向ビーム！ ' + defeated + '体を撃破！');
     }
     refreshControls();
   }
