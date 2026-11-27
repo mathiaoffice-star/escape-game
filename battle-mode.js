@@ -15,7 +15,10 @@
   state.weapon = saved.weapon==='beam' && state.beamUnlocked ? 'beam':'orb';
   state.skills={condom:Math.max(0,Math.min(5,Number(saved.skills?.condom)||0)),sage:Math.max(0,Math.min(5,Number(saved.skills?.sage)||0)),whiteBeam:Math.max(0,Math.min(5,Number(saved.skills?.whiteBeam)||0))};
   state.goldBalls=Math.max(0,Number(saved.goldBalls)||0);
-  function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon,orbLevel:state.orbLevel,beamUnlocked:state.beamUnlocked,beamLevel:state.beamLevel,skills:state.skills,goldBalls:state.goldBalls}))}catch(e){}}
+  state.characters=Array.isArray(saved.characters)?saved.characters.filter(x=>x==='nnyaata'):[];
+  state.selectedCharacter=state.characters.includes(saved.selectedCharacter)?saved.selectedCharacter:'default';
+  function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon,orbLevel:state.orbLevel,beamUnlocked:state.beamUnlocked,beamLevel:state.beamLevel,skills:state.skills,goldBalls:state.goldBalls,characters:state.characters,selectedCharacter:state.selectedCharacter}))}catch(e){}}
+  function notifyCharacterChange(){window.dispatchEvent(new CustomEvent('shamarupi-character-change',{detail:{id:state.selectedCharacter,image:state.selectedCharacter==='nnyaata'?'./characters/nnyaata.jpg':null}}));}
   const style = document.createElement('style');
   style.textContent = `
   #shamarupi-entry,#shamarupi-gacha-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005;vertical-align:middle;cursor:pointer}
@@ -81,6 +84,11 @@
   #shamarupi-modal .sw-gacha{border:1px solid #fbbf2466;background:linear-gradient(135deg,#7c2d12aa,#581c87aa);border-radius:16px;padding:14px;margin:14px 0;text-align:center}
   #shamarupi-modal .sw-gacha button{background:linear-gradient(135deg,#f59e0b,#ea580c);font-size:16px;min-width:190px}
   #shamarupi-modal .sw-gacha-result{min-height:25px;margin:10px 0 0;font-weight:900;color:#fde68a}
+  #shamarupi-modal .sw-character-book{margin-top:16px;padding:12px;border-radius:14px;background:#0f172a99;border:1px solid #fbbf2466}
+  #shamarupi-modal .sw-character-book h3{margin:0 0 10px;color:#fde68a;text-align:center}
+  #shamarupi-modal .sw-character-card{display:flex;gap:12px;align-items:center;padding:10px;background:#ffffff12;border-radius:12px}
+  #shamarupi-modal .sw-character-card img{width:84px;height:84px;object-fit:cover;border-radius:12px;background:#fff}
+  #shamarupi-modal .sw-character-card p{font-size:12px;color:#cbd5e1;margin:5px 0}
   #shamarupi-modal .sw-skill-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;margin-top:10px}
   #shamarupi-modal .sw-skill-card{background:#ffffff12;border:1px solid #ffffff25;border-radius:10px;padding:9px;font-size:12px}
   #shamarupi-modal .sw-skill-card b{display:block;font-size:14px}
@@ -148,6 +156,7 @@
         </div>
         <p class="sw-small">Lv.5のスキルが重複した場合は金の玉100個に変換されます。</p>
         <p class="sw-small">所持金の玉：<b id="sw-gold-balls">0</b></p>
+        <div class="sw-character-book"><h3>📖 キャラクター図鑑</h3><div class="sw-character-card"><img src="./characters/nnyaata.jpg" alt="ンニャァタ" id="sw-nnyaata-image"><div><b>ンニャァタ</b><p id="sw-nnyaata-status">？？？ 未入手</p><button id="sw-select-nnyaata" type="button" disabled>このキャラを選択</button></div></div><p class="sw-small">入手したキャラクターは通常モード・対戦モードで使用できます。</p></div>
       </div>
     </section>ion>
     <section id="sw-game" class="sw-panel" hidden>
@@ -223,15 +232,23 @@
     $('sw-sage-level').textContent=state.skills.sage;
     $('sw-whitebeam-level').textContent=state.skills.whiteBeam;
     $('sw-gold-balls').textContent=state.goldBalls.toLocaleString('ja-JP');
+    $('sw-nnyaata-status').textContent=state.characters.includes('nnyaata')?'✅ 入手済み'+(state.selectedCharacter==='nnyaata'?' ／ 選択中':''):'？？？ 未入手';
+    $('sw-select-nnyaata').disabled=!state.characters.includes('nnyaata')||state.selectedCharacter==='nnyaata';
+    $('sw-select-nnyaata').textContent=state.selectedCharacter==='nnyaata'?'選択中':'このキャラを選択';
   }
-  const gachaPool=[{key:'condom',name:'コンドム'},{key:'sage',name:'賢者タイム'},{key:'whiteBeam',name:'白濁ビーム（4方向）'}];
+  const gachaPool=[{type:'skill',key:'condom',name:'コンドム'},{type:'skill',key:'sage',name:'賢者タイム'},{type:'skill',key:'whiteBeam',name:'白濁ビーム（4方向）'},{type:'character',key:'nnyaata',name:'ンニャァタ'}];
   function pullGacha(){
     if(coinBalance()<3000){$('sw-gacha-result').textContent='コインが足りません。3,000コイン必要です。';return;}
     chargeBattleCoins(3000,'スキルガチャ',()=>{
       const item=gachaPool[Math.floor(Math.random()*gachaPool.length)];
-      const old=state.skills[item.key];
-      if(old<5){state.skills[item.key]=old+1;persist();$('sw-gacha-result').textContent='✨ '+item.name+' を獲得！ Lv.'+old+' → Lv.'+(old+1);}
-      else{state.goldBalls+=100;persist();$('sw-gacha-result').textContent='🎉 '+item.name+' は最大Lv.5！重複分を金の玉100個に変換しました。';}
+      if(item.type==='character'){
+        if(!state.characters.includes('nnyaata')){state.characters.push('nnyaata');state.selectedCharacter='nnyaata';persist();notifyCharacterChange();$('sw-gacha-result').textContent='🎉 NEW CHARACTER！ンニャァタを獲得！自動で選択しました！';}
+        else{state.goldBalls+=100;persist();$('sw-gacha-result').textContent='🎉 ンニャァタは入手済み！重複分を金の玉100個に変換しました。';}
+      }else{
+        const old=state.skills[item.key];
+        if(old<5){state.skills[item.key]=old+1;persist();$('sw-gacha-result').textContent='✨ '+item.name+' を獲得！ Lv.'+old+' → Lv.'+(old+1);}
+        else{state.goldBalls+=100;persist();$('sw-gacha-result').textContent='🎉 '+item.name+' は最大Lv.5！重複分を金の玉100個に変換しました。';}
+      }
       refreshShop();
     });
   }
@@ -243,6 +260,7 @@
   gachaHandle.addEventListener('pointerup',e=>{if(leverPointer!==e.pointerId)return;leverPointer=null;gachaHandle.style.transform='';if(leverDelta>=18)animateGachaPull();});
   gachaHandle.addEventListener('pointercancel',()=>{leverPointer=null;leverDelta=0;gachaHandle.style.transform='';});
   gachaHandle.addEventListener('click',e=>{e.preventDefault();animateGachaPull();});
+  $('sw-select-nnyaata').addEventListener('click',()=>{if(!state.characters.includes('nnyaata'))return;state.selectedCharacter='nnyaata';persist();notifyCharacterChange();refreshShop();$('sw-gacha-result').textContent='ンニャァタを選択しました！';});
   function showHome(){ $('sw-home').hidden=false;$('sw-gacha-screen').hidden=true;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
   function open(){modal.style.display='block';showHome();}
   function openGacha(){modal.style.display='block';$('sw-home').hidden=true;$('sw-gacha-screen').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;refreshShop();modal.scrollTop=0;}
@@ -552,6 +570,7 @@
     if(source instanceof HTMLImageElement)return source;
     const image=new Image();if(typeof source==='string'&&source)image.src=source;return image;
   })();
+  window.addEventListener('shamarupi-character-change',e=>{if(e.detail?.id==='nnyaata'&&fighterImage)fighterImage.src='./characters/nnyaata.jpg';});
   function draw(){
     const c=$('sw-arena'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
