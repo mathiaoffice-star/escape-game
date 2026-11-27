@@ -20,6 +20,10 @@
     try{audio.pause();audio.currentTime=0;const p=audio.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
   }
   function applyCharacter(){
+    // 図鑑画像はプレイヤー本体の画像要素が無くても必ず更新する
+    window.__defaultCharacterImage=DEFAULT_IMAGE;
+    const defaultCardImage=document.getElementById('sw-default-image');
+    if(defaultCardImage && defaultCardImage.getAttribute('src')!==DEFAULT_IMAGE)defaultCardImage.src=DEFAULT_IMAGE;
     const img=document.getElementById('playerImg')||document.querySelector('img[data-player-image]');
     if(!img)return;
     if(!img.dataset.nnyaataOriginalSrc)img.dataset.nnyaataOriginalSrc=img.currentSrc||img.src;
@@ -27,9 +31,6 @@
     if(img.src!==new URL(chosen,document.baseURI).href)img.src=chosen;
     if(window.playerImg instanceof HTMLImageElement)window.playerImg.src=chosen;
     window.__shamarupiCharacterImage=chosen;
-    window.__defaultCharacterImage=DEFAULT_IMAGE;
-    const defaultCardImage=document.getElementById('sw-default-image');
-    if(defaultCardImage && defaultCardImage.src!==DEFAULT_IMAGE)defaultCardImage.src=DEFAULT_IMAGE;
   }
   window.__defaultCharacterImage=DEFAULT_IMAGE;
   window.dispatchEvent(new CustomEvent('shamarupi-character-change',{detail:{id:'default',image:DEFAULT_IMAGE}}));
@@ -49,6 +50,6 @@
       if(tag!=='input'&&tag!=='textarea'&&tag!=='button')playVoice();
     }
   },true);
-  const observer=new MutationObserver(()=>{if(isSelected())applyCharacter();});
+  const observer=new MutationObserver(()=>{applyCharacter();});
   observer.observe(document.documentElement,{subtree:true,childList:true});
 })();
