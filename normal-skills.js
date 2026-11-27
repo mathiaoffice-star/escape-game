@@ -55,6 +55,7 @@
     #normalSkillControls button:disabled{opacity:.42}
     #normalSkillControls button .skill-cd{display:block;font-size:10px;font-weight:700;margin-top:3px}
     #normalSkillStatus{min-height:20px;text-align:center;font-size:12px;font-weight:800;color:#7c3aed;margin:3px 0 8px}
+    @media(max-width:600px){#gameScreen .controls #normalSkillControls{grid-column:1/-1!important;grid-row:3!important}#gameScreen .controls #normalSkillStatus{grid-column:1/-1!important;grid-row:4!important}#gameScreen .controls #restartBtn{grid-column:3!important;grid-row:2!important}}
     @media(max-width:420px){#normalSkillControls{gap:5px}#normalSkillControls button{min-width:0;font-size:11px;padding:6px 3px}}
   `;
   document.head.appendChild(style);
@@ -110,6 +111,7 @@
     });
     const activeCount = Object.keys(META).filter(k => levels[k] > 0 && equipped[k]).length;
     controls.hidden = activeCount === 0;
+    const status = document.getElementById('normalSkillStatus'); if (status) status.hidden = activeCount === 0;
   }
   function setStatus(message) {
     const el = document.getElementById('normalSkillStatus');
