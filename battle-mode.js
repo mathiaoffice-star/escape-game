@@ -1,6 +1,7 @@
 /* シャマルピー戦争: isolated PvP/CPU mode. Does not modify the original game loop. */
 (() => {
   'use strict';
+  try {
   if (window.__shamarupiBattleLoaded) return;
   window.__shamarupiBattleLoaded = true;
   const SUPABASE_URL = 'https://caittxvisaqpcrurqgag.supabase.co';
@@ -594,4 +595,13 @@
   showHome();
   // Add a title label to the document shell without touching the original game logic.
   document.title='シャマルピー戦争';
+  } catch(error) {
+    window.__shamarupiBattleLoaded = false;
+    console.error('[シャマルピー戦争 初期化エラー]', error);
+    const box=document.createElement('div');
+    box.id='shamarupi-init-exception';
+    box.textContent='対戦機能の初期化エラー：'+(error&&error.message?error.message:String(error));
+    box.style.cssText='position:fixed;z-index:2147483647;left:12px;right:12px;bottom:150px;padding:12px;background:#f3f3f3;color:#333;border:1px solid #ddd;border-radius:14px;font-size:13px;line-height:1.5;white-space:pre-wrap';
+    (document.body||document.documentElement).appendChild(box);
+  }
 })();
