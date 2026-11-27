@@ -303,7 +303,7 @@
     const duration=skillDuration(key);state.cooldowns[key]=Date.now()+skillCooldown(key);
     if(key==='condom'){state.shieldUntil=Date.now()+duration*1000;status('コンドム発動！ '+duration.toFixed(1)+'秒間バリア！');}
     else if(key==='sage'){state.enemySlowUntil=Date.now()+duration*1000;status('賢者タイム発動！ 相手を'+duration.toFixed(1)+'秒間スロー！');}
-    else{const level=state.skills.whiteBeam-1,damage=150; // CPU戦では4方向ビームを確実に撃破判定state.shots.push({x:state.x,y:state.y,life:18,crossBeam:true,level,damage,hit:false});if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x,y:state.y,crossBeam:true,level,damage}});status('白濁ビーム発射！ 4方向に照射！');}
+    else{const level=state.skills.whiteBeam-1,damage=35; // 対戦では一撃にならないよう調整state.shots.push({x:state.x,y:state.y,life:18,crossBeam:true,level,damage,hit:false});if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x,y:state.y,crossBeam:true,level,damage}});status('白濁ビーム発射！ 4方向に照射！');}
     if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'skill',payload:{uid:state.user.id,key,duration}});
     refreshSkillButtons();
   }
@@ -489,7 +489,7 @@
   function beginGame(){if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;state.started=Date.now();state.lastShot=0;state.lastSync=0;state.cpuLastShot=Date.now();state.shots=[];state.enemyShots=[];state.shieldUntil=0;state.slowUntil=0;state.enemySlowUntil=0;state.cooldowns={condom:0,sage:0};updateHud();refreshSkillButtons();state.raf=requestAnimationFrame(tick)}
   function shoot(){
     const now=Date.now(),beam=state.weapon==='beam',level=beam?state.beamLevel:state.orbLevel,delay=beam?720:420;if(now-state.lastShot<delay)return;state.lastShot=now;
-    const damage=beam?150:12+level*2; // CPU戦では白濁ビーム1発で撃破
+    const damage=beam?35:12+level*2; // 白濁ビームは中ダメージ。複数回当てて撃破
     playAttackAudio();
     state.shots.push({x:state.x+state.direction*.045,y:state.y,vx:state.direction*(beam?.03:.025),life:100,beam,followPlayer:beam,level,damage});
     if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x+state.direction*.045,y:state.y,beam,level,damage}});
@@ -535,7 +535,7 @@
       state.enemyShots.push({x:state.ex,y:state.ey,vx:dx/len*speed,vy:dy/len*speed,life:100,damage:18,targeted:true});
     }
     for(let i=state.shots.length-1;i>=0;i--){
-      const s=state.shots[i],x0=s.x,y0=s.y;if(s.crossBeam){s.x=state.x;s.y=state.y;s.life--;const width=.008+s.level*.004;const hit=Math.abs(state.ex-s.x)<=width||Math.abs(state.ey-s.y)<=width;if(hit&&!s.hit){s.hit=true;const damage=clamp(s.damage||150,1,150);state.enemyHp=Math.max(0,state.enemyHp-damage);updateHud();if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'damage',payload:{uid:state.user.id,target:state.opponent,damage}});status('白濁ビーム命中！ −'+damage+' HP');}if(s.life<=0)state.shots.splice(i,1);continue;}if(s.followPlayer){s.x=state.x+state.direction*.045;s.y=state.y;}else{s.x+=s.vx;s.y+=(s.vy||0);}s.life--;
+      const s=state.shots[i],x0=s.x,y0=s.y;if(s.crossBeam){s.x=state.x;s.y=state.y;s.life--;const width=.008+s.level*.004;const hit=Math.abs(state.ex-s.x)<=width||Math.abs(state.ey-s.y)<=width;if(hit&&!s.hit){s.hit=true;const damage=clamp(s.damage||35,1,40);state.enemyHp=Math.max(0,state.enemyHp-damage);updateHud();if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'damage',payload:{uid:state.user.id,target:state.opponent,damage}});status('白濁ビーム命中！ −'+damage+' HP');}if(s.life<=0)state.shots.splice(i,1);continue;}if(s.followPlayer){s.x=state.x+state.direction*.045;s.y=state.y;}else{s.x+=s.vx;s.y+=(s.vy||0);}s.life--;
       const radius=s.beam?.032:.065;
       const hit=s.beam?Math.abs(state.ey-s.y)<=radius:segmentHitsPoint(x0,y0,s.x,s.y,state.ex,state.ey,radius);
       if(hit&&s.life>0){
