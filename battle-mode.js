@@ -168,14 +168,18 @@
     }
     if(gachaEntry.isConnected)return true;
     const candidates=[...document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]')];
-    let start=candidates.find(el=>/ゲームスタート|ゲーム開始|スタート/.test((el.innerText||el.value||'').replace(/\\s/g,'')));
+    const isStart=el=>{
+      const label=String(el.innerText||el.value||el.textContent||'').toUpperCase().replaceAll(' ','');
+      return label.includes('GAMESTART')||label.includes('ゲームスタート')||label.includes('ゲーム開始');
+    };
+    let start=candidates.find(isStart);
     if(!start){
-      const all=[...document.querySelectorAll('body *')].filter(el=>el.children.length===0&&/GAME\\s*START|ゲームスタート|ゲーム開始/.test((el.textContent||'').trim()));
-      start=all[0]?.parentElement||all[0]||null;
+      const textNodes=[...document.querySelectorAll('body *')].filter(el=>el.children.length===0&&isStart(el));
+      start=textNodes[0]?.parentElement||textNodes[0]||null;
     }
     if(start){
-      if(!entry.isConnected)start.insertAdjacentElement('afterend',entry);
-      if(!gachaEntry.isConnected)entry.insertAdjacentElement('afterend',gachaEntry);
+      start.insertAdjacentElement('afterend',entry);
+      entry.insertAdjacentElement('afterend',gachaEntry);
       return true;
     }
     return false;
@@ -201,6 +205,7 @@
     $('sw-equip-beam').disabled=!state.beamUnlocked;
     $('sw-equip-orb').disabled=state.weapon==='orb';$('sw-equip-beam').disabled=!state.beamUnlocked||state.weapon==='beam';
     $('sw-gacha-pull').disabled=coinBalance()<3000;
+    $('sw-gacha-handle').disabled=coinBalance()<3000;
     $('sw-gacha-pull').textContent=coinBalance()<3000?'コイン不足（3,000必要）':'ガチャを1回引く（3,000）';
     $('sw-condom-level').textContent=state.skills.condom;
     $('sw-sage-level').textContent=state.skills.sage;
