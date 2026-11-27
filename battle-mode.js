@@ -573,6 +573,7 @@
     if(source instanceof HTMLImageElement)return source;
     const image=new Image();if(typeof source==='string'&&source)image.src=source;return image;
   })();
+  try{const characterSave=JSON.parse(localStorage.getItem(STORE)||'{}');if(characterSave.selectedCharacter==='nnyaata'&&(characterSave.characters||[]).includes('nnyaata')&&fighterImage)fighterImage.src='./characters/nnyaata.jpg';}catch(e){}
   const fighterOriginalSrc=fighterImage?.src||'';
   window.addEventListener('shamarupi-character-change',e=>{if(!fighterImage)return;if(e.detail?.id==='nnyaata')fighterImage.src='./characters/nnyaata.jpg';else if(e.detail?.id==='default'&&fighterOriginalSrc)fighterImage.src=fighterOriginalSrc;});
   function draw(){
