@@ -28,7 +28,7 @@
   function isSenpaiSelected(){const saved=read();return saved.selectedCharacter==='senpai' && (saved.characters||[]).includes('senpai');}
   function isCustomCharacterSelected(){return isSelected()||isSenpaiSelected();}
   function playVoice(){
-    if(!isCustomCharacterSelected())return;
+    if(!isSelected())return;
     const now=performance.now();
     if(now-lastVoiceAt<90)return;
     lastVoiceAt=now;
@@ -88,7 +88,7 @@
     return new Set(Array.from(document.querySelectorAll('audio,video')).filter(el=>!el.paused));
   }
   function silenceNewAttackMedia(before){
-    if(!isCustomCharacterSelected())return;
+    if(!isSelected())return;
     document.querySelectorAll('audio,video').forEach(el=>{
       if(el===audio || el===window.__nnyaataVoiceAudio || before.has(el))return;
       if(!el.paused){
