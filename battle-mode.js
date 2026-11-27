@@ -23,7 +23,7 @@
   #shamarupi-skill-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#0f766e,#0891b2);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0f766e55;vertical-align:middle;cursor:pointer}
   #shamarupi-launcher{position:fixed!important;z-index:99990!important;left:50%!important;bottom:max(14px,env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;display:flex!important;flex-wrap:wrap!important;justify-content:center!important;align-items:center!important;gap:7px!important;width:min(96vw,560px)!important;padding:8px!important;border-radius:18px!important;background:#0f172add!important;border:1px solid #ffffff33!important;box-shadow:0 8px 28px #0008!important;backdrop-filter:blur(10px)!important}
   #shamarupi-launcher button{flex:1 1 28%!important;min-width:0!important;margin:0!important;padding:12px 8px!important;font-size:clamp(12px,3.2vw,15px)!important;white-space:nowrap!important}
-  body:has(#gameScreen:not([hidden])) #shamarupi-launcher{display:none!important}
+  #shamarupi-launcher.is-game-hidden{display:none!important}
 
   #shamarupi-modal{position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at 50% 0,#263c62,#080d19 72%);color:#fff;font-family:system-ui,sans-serif;display:none;overflow:auto;padding:16px;box-sizing:border-box}
   #shamarupi-modal *{box-sizing:border-box}#shamarupi-modal .sw-wrap{max-width:760px;margin:0 auto}
@@ -186,6 +186,20 @@
     return true;
   }
   placeBattleEntry();
+  // Safariでは hidden 属性ではなく親画面の display で画面を切り替えるため、
+  // :has(#gameScreen:not([hidden])) では常時非表示になってしまう。
+  // 実際にゲーム画面がレイアウト上表示されている場合だけランチャーを隠す。
+  function syncBattleLauncher(){
+    const gameScreen=document.getElementById('gameScreen');
+    const visible=!!(gameScreen && gameScreen.getClientRects().length &&
+      getComputedStyle(gameScreen).display!=='none' &&
+      getComputedStyle(gameScreen).visibility!=='hidden');
+    launcher.classList.toggle('is-game-hidden',visible);
+  }
+  syncBattleLauncher();
+  const launcherObserver=new MutationObserver(syncBattleLauncher);
+  launcherObserver.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class','style','hidden','aria-hidden']});
+  window.addEventListener('resize',syncBattleLauncher);
   const $=id=>document.getElementById(id);
   function coinBalance(){try{return typeof window.getAvailableGameCoins==='function'?window.getAvailableGameCoins():(typeof wallet!=='undefined'?Math.max(0,Number(wallet)||0):0)}catch(e){return 0}}
   const orbCosts=[100,180,280,420,600], beamCosts=[150,250,400,600,850];
