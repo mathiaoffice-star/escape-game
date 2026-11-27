@@ -200,10 +200,10 @@
   // :has(#gameScreen:not([hidden])) では常時非表示になってしまう。
   // 実際にゲーム画面がレイアウト上表示されている場合だけランチャーを隠す。
   function syncBattleLauncher(){
-    // ゲーム画面の要素はメニュー表示中もレイアウト上存在することがある。
-    // gameActive が true の実プレイ中だけランチャーを隠す。
-    const playing=typeof gameActive!=='undefined' && !!gameActive && !(typeof gameOver!=='undefined' && gameOver);
-    launcher.classList.toggle('is-game-hidden',playing);
+    // ランチャーはタイトル画面でも常に表示する。
+    // iOS Safariでは gameActive の初期値や画面切替状態が不安定なため、
+    // 自動判定で非表示にするとメニュー入口そのものが消える。
+    launcher.classList.remove('is-game-hidden');
   }
   syncBattleLauncher();
   const launcherObserver=new MutationObserver(syncBattleLauncher);
