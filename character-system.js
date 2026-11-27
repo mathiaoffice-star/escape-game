@@ -11,7 +11,7 @@
   const read=()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(_){return {}}};
   const audio=new Audio(VOICE);
   audio.preload='auto';
-  const SENPAI_ATTACK='./audio/senpai-attack.ogg';
+  const SENPAI_ATTACK='./audio/gayボイス.mp3';
   const senpaiAudio=new Audio(SENPAI_ATTACK);
   senpaiAudio.preload='auto';
   window.__senpaiVoiceAudio=senpaiAudio;
