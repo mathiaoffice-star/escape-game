@@ -21,6 +21,10 @@
   #shamarupi-entry,#shamarupi-gacha-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005;vertical-align:middle;cursor:pointer}
   #shamarupi-gacha-entry{background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 5px 18px #f59e0b55}
   #shamarupi-skill-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#0f766e,#0891b2);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0f766e55;vertical-align:middle;cursor:pointer}
+  #shamarupi-launcher{position:fixed!important;z-index:99990!important;left:50%!important;bottom:max(14px,env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;display:flex!important;flex-wrap:wrap!important;justify-content:center!important;align-items:center!important;gap:7px!important;width:min(96vw,560px)!important;padding:8px!important;border-radius:18px!important;background:#0f172add!important;border:1px solid #ffffff33!important;box-shadow:0 8px 28px #0008!important;backdrop-filter:blur(10px)!important}
+  #shamarupi-launcher button{flex:1 1 28%!important;min-width:0!important;margin:0!important;padding:12px 8px!important;font-size:clamp(12px,3.2vw,15px)!important;white-space:nowrap!important}
+  body:has(#gameScreen:not([hidden])) #shamarupi-launcher{display:none!important}
+
   #shamarupi-modal{position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at 50% 0,#263c62,#080d19 72%);color:#fff;font-family:system-ui,sans-serif;display:none;overflow:auto;padding:16px;box-sizing:border-box}
   #shamarupi-modal *{box-sizing:border-box}#shamarupi-modal .sw-wrap{max-width:760px;margin:0 auto}
   #shamarupi-modal h2{text-align:center;font-size:clamp(26px,6vw,42px);margin:12px 0 4px;color:#f5eaff;text-shadow:0 3px 18px #c026d366}
@@ -169,40 +173,19 @@
     <section id="sw-result" class="sw-panel" hidden><h2 id="sw-result-title">勝利！</h2><p id="sw-result-text" style="text-align:center"></p><p id="sw-rating-result" style="text-align:center">レートを確認中…</p><div class="sw-actions"><button id="sw-again">もう一度対戦</button></div></section>
   </div>`;
   document.body.append(modal);
+  // メニューの文言やDOM構造に依存せず、常に表示されるランチャーへ配置
   function placeBattleEntry(){
-    if(entry.isConnected){
-      if(!gachaEntry.isConnected)entry.insertAdjacentElement('afterend',gachaEntry);
-      if(!skillEntry.isConnected)gachaEntry.insertAdjacentElement('afterend',skillEntry);
-      return true;
+    let launcher=document.getElementById('shamarupi-launcher');
+    if(!launcher){
+      launcher=document.createElement('div');
+      launcher.id='shamarupi-launcher';
+      launcher.setAttribute('aria-label','シャマルピー戦争メニュー');
+      document.body.appendChild(launcher);
     }
-    if(gachaEntry.isConnected){
-      if(!skillEntry.isConnected)gachaEntry.insertAdjacentElement('afterend',skillEntry);
-      return true;
-    }
-    if(skillEntry.isConnected)return true;
-    const candidates=[...document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]')];
-    const isStart=el=>{
-      const label=String(el.innerText||el.value||el.textContent||'').toUpperCase().replaceAll(' ','');
-      return label.includes('GAMESTART')||label.includes('ゲームスタート')||label.includes('ゲーム開始');
-    };
-    let start=candidates.find(isStart);
-    if(!start){
-      const textNodes=[...document.querySelectorAll('body *')].filter(el=>el.children.length===0&&isStart(el));
-      start=textNodes[0]?.parentElement||textNodes[0]||null;
-    }
-    if(start){
-      start.insertAdjacentElement('afterend',entry);
-      entry.insertAdjacentElement('afterend',gachaEntry);
-      gachaEntry.insertAdjacentElement('afterend',skillEntry);
-      return true;
-    }
-    return false;
+    [entry,gachaEntry,skillEntry].forEach(button=>launcher.appendChild(button));
+    return true;
   }
-  if(!placeBattleEntry()){
-    const observer=new MutationObserver(()=>{if(placeBattleEntry())observer.disconnect();});
-    observer.observe(document.body,{childList:true,subtree:true});
-    setTimeout(()=>observer.disconnect(),15000);
-  }
+  placeBattleEntry();
   const $=id=>document.getElementById(id);
   function coinBalance(){try{return typeof window.getAvailableGameCoins==='function'?window.getAvailableGameCoins():(typeof wallet!=='undefined'?Math.max(0,Number(wallet)||0):0)}catch(e){return 0}}
   const orbCosts=[100,180,280,420,600], beamCosts=[150,250,400,600,850];
