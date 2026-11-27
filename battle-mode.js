@@ -106,7 +106,8 @@
       <div class="sw-gacha">
         <b>🎰 スキルガチャ</b>
         <p class="sw-small">1回 3,000コイン ／ 重複するとスキルLvアップ（最大Lv.5）</p>
-        <div class="sw-gacha-lever" id="sw-gacha-lever" aria-label="レバーを下に引いてガチャを回す"><span class="sw-gacha-orb">◯</span><button id="sw-gacha-handle" class="sw-gacha-handle" type="button" aria-label="レバーを引く">U</button><span class="sw-gacha-orb">◯</span></div>\n        <button id="sw-gacha-pull" type="button">ガチャを1回引く（3,000）</button>
+        <div class="sw-gacha-lever" id="sw-gacha-lever" aria-label="レバーを下に引いてガチャを回す"><span class="sw-gacha-orb">◯</span><button id="sw-gacha-handle" class="sw-gacha-handle" type="button" aria-label="レバーを引く">U</button><span class="sw-gacha-orb">◯</span></div>
+        <button id="sw-gacha-pull" type="button">ガチャを1回引く（3,000）</button>
         <div id="sw-gacha-result" class="sw-gacha-result" aria-live="polite">スキルを集めて対戦を有利にしよう！</div>
         <div class="sw-skill-list">
           <div class="sw-skill-card"><b>🛡️ コンドム Lv.<span id="sw-condom-level">0</span>/5</b><span>発動中は攻撃を防ぐ。初期持続1秒。</span></div>
@@ -205,7 +206,14 @@
       refreshShop();
     });
   }
-  $('sw-gacha-pull').addEventListener('click',pullGacha);\n  const gachaLever=$('sw-gacha-lever'),gachaHandle=$('sw-gacha-handle');\n  let leverPointer=null,leverTriggered=false;\n  function animateGachaPull(){if(leverTriggered)return;leverTriggered=true;gachaHandle.classList.add('pulling');gachaLever.classList.add('spinning');setTimeout(()=>{gachaHandle.classList.remove('pulling');pullGacha();setTimeout(()=>{gachaLever.classList.remove('spinning');leverTriggered=false;},1250);},240);}\n  gachaHandle.addEventListener('pointerdown',e=>{if($('sw-gacha-pull').disabled)return;e.preventDefault();leverPointer=e.pointerId;gachaHandle.setPointerCapture(e.pointerId);gachaHandle.classList.add('pulling');});\n  gachaHandle.addEventListener('pointerup',e=>{if(leverPointer!==e.pointerId)return;leverPointer=null;animateGachaPull();});\n  gachaHandle.addEventListener('pointercancel',()=>{leverPointer=null;gachaHandle.classList.remove('pulling');});\n  gachaHandle.addEventListener('click',e=>{e.preventDefault();animateGachaPull();});
+  $('sw-gacha-pull').addEventListener('click',pullGacha);
+  const gachaLever=$('sw-gacha-lever'),gachaHandle=$('sw-gacha-handle');
+  let leverPointer=null,leverTriggered=false;
+  function animateGachaPull(){if(leverTriggered)return;leverTriggered=true;gachaHandle.classList.add('pulling');gachaLever.classList.add('spinning');setTimeout(()=>{gachaHandle.classList.remove('pulling');pullGacha();setTimeout(()=>{gachaLever.classList.remove('spinning');leverTriggered=false;},1250);},240);}
+  gachaHandle.addEventListener('pointerdown',e=>{if($('sw-gacha-pull').disabled)return;e.preventDefault();leverPointer=e.pointerId;gachaHandle.setPointerCapture(e.pointerId);gachaHandle.classList.add('pulling');});
+  gachaHandle.addEventListener('pointerup',e=>{if(leverPointer!==e.pointerId)return;leverPointer=null;animateGachaPull();});
+  gachaHandle.addEventListener('pointercancel',()=>{leverPointer=null;gachaHandle.classList.remove('pulling');});
+  gachaHandle.addEventListener('click',e=>{e.preventDefault();animateGachaPull();});
   function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
   function open(){modal.style.display='block';showHome();}
   function openGacha(){open();requestAnimationFrame(()=>{const section=modal.querySelector('.sw-gacha');if(section)section.scrollIntoView({behavior:'smooth',block:'center'});});}
