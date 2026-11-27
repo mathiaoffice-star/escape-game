@@ -19,14 +19,16 @@
     try{audio.pause();audio.currentTime=0;const p=audio.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
   }
   function applyCharacter(){
-    if(!isSelected())return;
     const img=document.getElementById('playerImg')||document.querySelector('img[data-player-image]');
-    if(img instanceof HTMLImageElement && img.src!==new URL(IMAGE,document.baseURI).href) img.src=IMAGE;
-    if(window.playerImg instanceof HTMLImageElement) window.playerImg.src=IMAGE;
-    if(window.ASSETS && typeof window.ASSETS==='object'){
-      const replacement=new Image();replacement.src=IMAGE;window.ASSETS.player=replacement;
+    if(!img)return;
+    if(!img.dataset.nnyaataOriginalSrc)img.dataset.nnyaataOriginalSrc=img.currentSrc||img.src;
+    if(isSelected()){
+      if(img.src!==new URL(IMAGE,document.baseURI).href)img.src=IMAGE;
+      if(window.playerImg instanceof HTMLImageElement)window.playerImg.src=IMAGE;
+      window.__shamarupiCharacterImage=IMAGE;
+    }else if(read().selectedCharacter==='default'&&img.dataset.nnyaataOriginalSrc){
+      img.src=img.dataset.nnyaataOriginalSrc;
     }
-    window.__shamarupiCharacterImage=IMAGE;
   }
   window.playNnyaataVoice=playVoice;
   window.addEventListener('shamarupi-character-change',e=>{
