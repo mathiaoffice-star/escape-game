@@ -63,6 +63,41 @@
   window.__defaultCharacterImage=DEFAULT_IMAGE;
   window.dispatchEvent(new CustomEvent('shamarupi-character-change',{detail:{id:'default',image:DEFAULT_IMAGE}}));
   window.playNnyaataVoice=playVoice;
+  window.__nnyaataVoiceAudio=audio;
+  // Attack input can trigger the original game's sound through a separate internal
+  // function (not window.playAttack). Stop only audio elements newly started by
+  // that same input, while leaving BGM and the Nnyaata voice untouched.
+  function capturePlayingMedia(){
+    return new Set(Array.from(document.querySelectorAll('audio,video')).filter(el=>!el.paused));
+  }
+  function silenceNewAttackMedia(before){
+    if(!isSelected())return;
+    document.querySelectorAll('audio,video').forEach(el=>{
+      if(el===audio || el===window.__nnyaataVoiceAudio || before.has(el))return;
+      if(!el.paused){
+        try{el.pause();el.currentTime=0;}catch(e){}
+      }
+    });
+  }
+  let clickMediaBefore=null, keyMediaBefore=null;
+  document.addEventListener('click',e=>{
+    if(e.target?.closest?.('#attackBtn'))clickMediaBefore=capturePlayingMedia();
+  },true);
+  document.addEventListener('click',e=>{
+    if(!e.target?.closest?.('#attackBtn'))return;
+    silenceNewAttackMedia(clickMediaBefore||new Set());
+    clickMediaBefore=null;
+  },false);
+  document.addEventListener('keydown',e=>{
+    const tag=(document.activeElement?.tagName||'').toLowerCase();
+    if((e.code==='Space'||e.key===' ')&&!e.repeat&&tag!=='input'&&tag!=='textarea'&&tag!=='button')keyMediaBefore=capturePlayingMedia();
+  },true);
+  document.addEventListener('keydown',e=>{
+    if((e.code==='Space'||e.key===' ')&&!e.repeat){
+      silenceNewAttackMedia(keyMediaBefore||new Set());
+      keyMediaBefore=null;
+    }
+  },false);
   window.addEventListener('shamarupi-character-change',e=>{
     if(e.detail?.id==='nnyaata'||e.detail?.id==='default')applyCharacter();
   });
