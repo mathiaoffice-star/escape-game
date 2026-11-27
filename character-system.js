@@ -28,6 +28,8 @@
     if(window.playerImg instanceof HTMLImageElement)window.playerImg.src=chosen;
     window.__shamarupiCharacterImage=chosen;
     window.__defaultCharacterImage=DEFAULT_IMAGE;
+    const defaultCardImage=document.getElementById('sw-default-image');
+    if(defaultCardImage && defaultCardImage.src!==DEFAULT_IMAGE)defaultCardImage.src=DEFAULT_IMAGE;
   }
   window.__defaultCharacterImage=DEFAULT_IMAGE;
   window.dispatchEvent(new CustomEvent('shamarupi-character-change',{detail:{id:'default',image:DEFAULT_IMAGE}}));
