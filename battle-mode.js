@@ -18,7 +18,8 @@
   function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon,orbLevel:state.orbLevel,beamUnlocked:state.beamUnlocked,beamLevel:state.beamLevel,skills:state.skills,goldBalls:state.goldBalls}))}catch(e){}}
   const style = document.createElement('style');
   style.textContent = `
-  #shamarupi-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005;vertical-align:middle;cursor:pointer}
+  #shamarupi-entry,#shamarupi-gacha-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005;vertical-align:middle;cursor:pointer}
+  #shamarupi-gacha-entry{background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 5px 18px #f59e0b55}
   #shamarupi-modal{position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at 50% 0,#263c62,#080d19 72%);color:#fff;font-family:system-ui,sans-serif;display:none;overflow:auto;padding:16px;box-sizing:border-box}
   #shamarupi-modal *{box-sizing:border-box}#shamarupi-modal .sw-wrap{max-width:760px;margin:0 auto}
   #shamarupi-modal h2{text-align:center;font-size:clamp(26px,6vw,42px);margin:12px 0 4px;color:#f5eaff;text-shadow:0 3px 18px #c026d366}
@@ -76,6 +77,7 @@
   `;
   document.head.appendChild(style);
   const entry=document.createElement('button');entry.id='shamarupi-entry';entry.type='button';entry.textContent='⚔ 対戦モード';
+  const gachaEntry=document.createElement('button');gachaEntry.id='shamarupi-gacha-entry';gachaEntry.type='button';gachaEntry.textContent='🎰 ガチャ';
   const modal=document.createElement('div');modal.id='shamarupi-modal';
   modal.innerHTML=`<div class="sw-wrap">
     <div class="sw-actions"><button class="secondary" id="sw-close">タイトルへ戻る</button></div>
@@ -154,7 +156,7 @@
     if(entry.isConnected)return true;
     const candidates=[...document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]')];
     const start=candidates.find(el=>/ゲームスタート|ゲーム開始|スタート/.test((el.innerText||el.value||'').replace(/\\s/g,'')));
-    if(start){start.insertAdjacentElement('afterend',entry);return true;}
+    if(start){start.insertAdjacentElement('afterend',entry);entry.insertAdjacentElement('afterend',gachaEntry);return true;}
     return false;
   }
   if(!placeBattleEntry()){
@@ -198,6 +200,8 @@
   $('sw-gacha-pull').addEventListener('click',pullGacha);
   function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
   function open(){modal.style.display='block';showHome();}
+  function openGacha(){open();requestAnimationFrame(()=>{const section=modal.querySelector('.sw-gacha');if(section)section.scrollIntoView({behavior:'smooth',block:'center'});});}
+  gachaEntry.addEventListener('click',openGacha);
   function close(){stopGame();modal.style.display='none';}
   entry.onclick=open;$('sw-close').onclick=close;
   function status(t){$('sw-status').textContent=t;}
