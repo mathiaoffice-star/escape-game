@@ -156,7 +156,7 @@
         </div>
         <p class="sw-small">Lv.5のスキルが重複した場合は金の玉100個に変換されます。</p>
         <p class="sw-small">所持金の玉：<b id="sw-gold-balls">0</b></p>
-        <div class="sw-character-book"><h3>📖 キャラクター図鑑</h3><div class="sw-character-card"><img src="./characters/nnyaata.jpg" alt="ンニャァタ" id="sw-nnyaata-image"><div><b>ンニャァタ</b><p id="sw-nnyaata-status">？？？ 未入手</p><button id="sw-select-nnyaata" type="button" disabled>このキャラを選択</button></div></div><p class="sw-small">入手したキャラクターは通常モード・対戦モードで使用できます。</p></div>
+        <div class="sw-character-book"><h3>📖 キャラクター図鑑</h3><div class="sw-character-card"><img src="./characters/nnyaata.jpg" alt="ンニャァタ" id="sw-nnyaata-image"><div><b>ンニャァタ</b><p id="sw-nnyaata-status">？？？ 未入手</p><button id="sw-select-nnyaata" type="button" disabled>このキャラを選択</button></div></div><div class="sw-character-card" style="margin-top:8px"><div style="width:84px;height:84px;border-radius:12px;background:#cbd5e1;color:#334155;display:grid;place-items:center;font-size:30px">🙂</div><div><b>初期キャラクター</b><p id="sw-default-status">いつでも選択できます</p><button id="sw-select-default" type="button">初期キャラに戻す</button></div></div><p class="sw-small">入手したキャラクターは通常モード・対戦モードで使用できます。</p></div>
       </div>
     </section>ion>
     <section id="sw-game" class="sw-panel" hidden>
@@ -235,6 +235,8 @@
     $('sw-nnyaata-status').textContent=state.characters.includes('nnyaata')?'✅ 入手済み'+(state.selectedCharacter==='nnyaata'?' ／ 選択中':''):'？？？ 未入手';
     $('sw-select-nnyaata').disabled=!state.characters.includes('nnyaata')||state.selectedCharacter==='nnyaata';
     $('sw-select-nnyaata').textContent=state.selectedCharacter==='nnyaata'?'選択中':'このキャラを選択';
+    $('sw-default-status').textContent=state.selectedCharacter==='default'?'✅ 選択中':'いつでも選択できます';
+    $('sw-select-default').disabled=state.selectedCharacter==='default';
   }
   const gachaPool=[{type:'skill',key:'condom',name:'コンドム'},{type:'skill',key:'sage',name:'賢者タイム'},{type:'skill',key:'whiteBeam',name:'白濁ビーム（4方向）'},{type:'character',key:'nnyaata',name:'ンニャァタ'}];
   function pullGacha(){
@@ -261,6 +263,7 @@
   gachaHandle.addEventListener('pointercancel',()=>{leverPointer=null;leverDelta=0;gachaHandle.style.transform='';});
   gachaHandle.addEventListener('click',e=>{e.preventDefault();animateGachaPull();});
   $('sw-select-nnyaata').addEventListener('click',()=>{if(!state.characters.includes('nnyaata'))return;state.selectedCharacter='nnyaata';persist();notifyCharacterChange();refreshShop();$('sw-gacha-result').textContent='ンニャァタを選択しました！';});
+  $('sw-select-default').addEventListener('click',()=>{state.selectedCharacter='default';persist();notifyCharacterChange();refreshShop();$('sw-gacha-result').textContent='初期キャラクターに戻しました！';});
   function showHome(){ $('sw-home').hidden=false;$('sw-gacha-screen').hidden=true;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
   function open(){modal.style.display='block';showHome();}
   function openGacha(){modal.style.display='block';$('sw-home').hidden=true;$('sw-gacha-screen').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;refreshShop();modal.scrollTop=0;}
@@ -570,7 +573,8 @@
     if(source instanceof HTMLImageElement)return source;
     const image=new Image();if(typeof source==='string'&&source)image.src=source;return image;
   })();
-  window.addEventListener('shamarupi-character-change',e=>{if(e.detail?.id==='nnyaata'&&fighterImage)fighterImage.src='./characters/nnyaata.jpg';});
+  const fighterOriginalSrc=fighterImage?.src||'';
+  window.addEventListener('shamarupi-character-change',e=>{if(!fighterImage)return;if(e.detail?.id==='nnyaata')fighterImage.src='./characters/nnyaata.jpg';else if(e.detail?.id==='default'&&fighterOriginalSrc)fighterImage.src=fighterOriginalSrc;});
   function draw(){
     const c=$('sw-arena'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
