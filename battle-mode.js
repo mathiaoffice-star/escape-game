@@ -6,14 +6,14 @@
   const SUPABASE_URL = 'https://caittxvisaqpcrurqgag.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_VBhQe8t5WtKR39XluwRZJg_sKrbieI7';
   const STORE = 'shamarupiWarV1';
-  const state = { mode:'idle', user:null, lobby:null, room:null, opponent:null, started:0, hp:150, enemyHp:150, maxHp:150, x:0.18, y:0.5, ex:0.82, ey:0.5, shots:[], enemyShots:[], keys:{}, lastShot:0, lastSync:0, raf:0, wins:0, rating:1000, weapon:'orb', orbLevel:0, beamUnlocked:false, beamLevel:0, ended:false, cpuAt:0, roomId:null, skills:{condom:0,sage:0}, goldBalls:0, cooldowns:{condom:0,sage:0}, shieldUntil:0, slowUntil:0, enemySlowUntil:0 };
+  const state = { mode:'idle', user:null, lobby:null, room:null, opponent:null, started:0, hp:150, enemyHp:150, maxHp:150, x:0.18, y:0.5, ex:0.82, ey:0.5, shots:[], enemyShots:[], keys:{}, lastShot:0, lastSync:0, raf:0, wins:0, rating:1000, weapon:'orb', orbLevel:0, beamUnlocked:false, beamLevel:0, ended:false, cpuAt:0, roomId:null, skills:{condom:0,sage:0,whiteBeam:0}, goldBalls:0, cooldowns:{condom:0,sage:0,whiteBeam:0}, shieldUntil:0, slowUntil:0, enemySlowUntil:0 };
   const saved = (()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(e){return {}}})();
   state.wins = Number(saved.wins)||0;
   state.orbLevel = Math.max(0,Math.min(5,Number(saved.orbLevel)||0));
   state.beamUnlocked = !!saved.beamUnlocked || saved.weapon==='beam';
   state.beamLevel = Math.max(0,Math.min(5,Number(saved.beamLevel)||0));
   state.weapon = saved.weapon==='beam' && state.beamUnlocked ? 'beam':'orb';
-  state.skills={condom:Math.max(0,Math.min(5,Number(saved.skills?.condom)||0)),sage:Math.max(0,Math.min(5,Number(saved.skills?.sage)||0))};
+  state.skills={condom:Math.max(0,Math.min(5,Number(saved.skills?.condom)||0)),sage:Math.max(0,Math.min(5,Number(saved.skills?.sage)||0)),whiteBeam:Math.max(0,Math.min(5,Number(saved.skills?.whiteBeam)||0))};
   state.goldBalls=Math.max(0,Number(saved.goldBalls)||0);
   function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon,orbLevel:state.orbLevel,beamUnlocked:state.beamUnlocked,beamLevel:state.beamLevel,skills:state.skills,goldBalls:state.goldBalls}))}catch(e){}}
   const style = document.createElement('style');
@@ -109,6 +109,7 @@
         <div class="sw-skill-list">
           <div class="sw-skill-card"><b>🛡️ コンドム Lv.<span id="sw-condom-level">0</span>/5</b><span>発動中は攻撃を防ぐ。初期持続1秒。</span></div>
           <div class="sw-skill-card"><b>⏳ 賢者タイム Lv.<span id="sw-sage-level">0</span>/5</b><span>相手の動きを遅くする。初期持続2秒。</span></div>
+          <div class="sw-skill-card"><b>✨ 白濁ビーム（4方向） Lv.<span id="sw-whitebeam-level">0</span>/5</b><span>上下左右へ同時発射。Lvが上がるほどビームが太くなる。</span></div>
         </div>
         <p class="sw-small">Lv.5のスキルが重複した場合は金の玉1個に変換されます。</p>
         <p class="sw-small">所持金の玉：<b id="sw-gold-balls">0</b></p>
@@ -140,6 +141,7 @@
       <div class="sw-actions" style="margin-top:8px">
         <button id="sw-use-condom" class="sw-skill-btn" type="button">🛡️ コンドム</button>
         <button id="sw-use-sage" class="sw-skill-btn" type="button">⏳ 賢者タイム</button>
+        <button id="sw-use-whiteBeam" class="sw-skill-btn" type="button">✨ 白濁ビーム（4方向）</button>
       </div>
       <p class="sw-small">スマホ：左スティックで上下左右に移動、発射ボタンを長押し。PC：A/D・←/→で左右、W/S・↑/↓で上下、Spaceで攻撃。</p>
       <div class="sw-actions"><button id="sw-friend-copy-wait" class="secondary" disabled>合言葉をコピー</button></div>
@@ -179,16 +181,17 @@
     $('sw-gacha-pull').textContent=coinBalance()<3000?'コイン不足（3,000必要）':'ガチャを1回引く（3,000）';
     $('sw-condom-level').textContent=state.skills.condom;
     $('sw-sage-level').textContent=state.skills.sage;
+    $('sw-whitebeam-level').textContent=state.skills.whiteBeam;
     $('sw-gold-balls').textContent=state.goldBalls.toLocaleString('ja-JP');
   }
-  const gachaPool=[{key:'condom',name:'コンドム'},{key:'sage',name:'賢者タイム'}];
+  const gachaPool=[{key:'condom',name:'コンドム'},{key:'sage',name:'賢者タイム'},{key:'whiteBeam',name:'白濁ビーム（4方向）'}];
   function pullGacha(){
     if(coinBalance()<3000){$('sw-gacha-result').textContent='コインが足りません。3,000コイン必要です。';return;}
     chargeBattleCoins(3000,'スキルガチャ',()=>{
       const item=gachaPool[Math.floor(Math.random()*gachaPool.length)];
       const old=state.skills[item.key];
       if(old<5){state.skills[item.key]=old+1;persist();$('sw-gacha-result').textContent='✨ '+item.name+' を獲得！ Lv.'+old+' → Lv.'+(old+1);}
-      else{state.goldBalls++;persist();$('sw-gacha-result').textContent='🎉 '+item.name+' は最大Lv.5！重複分を金の玉1個に変換しました。';}
+      else{state.goldBalls+=100;persist();$('sw-gacha-result').textContent='🎉 '+item.name+' は最大Lv.5！重複分を金の玉100個に変換しました。';}
       refreshShop();
     });
   }
@@ -198,26 +201,28 @@
   function close(){stopGame();modal.style.display='none';}
   entry.onclick=open;$('sw-close').onclick=close;
   function status(t){$('sw-status').textContent=t;}
-  function skillDuration(key){const lv=state.skills[key];return key==='condom'?1+(lv-1)*0.25:2+(lv-1)*0.5;}
+  function skillDuration(key){const lv=state.skills[key];return key==='condom'?1+(lv-1)*0.25:key==='sage'?2+(lv-1)*0.5:0.25;}
   function skillCooldown(key){return Math.max(6,10-(state.skills[key]-1)*1)*1000;}
   function refreshSkillButtons(){
     const now=Date.now();
-    for(const key of ['condom','sage']){
+    for(const key of ['condom','sage','whiteBeam']){
       const button=$('sw-use-'+key),level=state.skills[key],remaining=Math.max(0,state.cooldowns[key]-now);
       button.disabled=level<1||remaining>0||!['playing','cpu'].includes(state.mode);
-      button.textContent=(key==='condom'?'🛡️ コンドム':'⏳ 賢者タイム')+(level<1?'（未所持）':remaining>0?'（'+(remaining/1000).toFixed(1)+'秒）':' 発動');
+      button.textContent=(key==='condom'?'🛡️ コンドム':key==='sage'?'⏳ 賢者タイム':'✨ 白濁ビーム（4方向）')+(level<1?'（未所持）':remaining>0?'（'+(remaining/1000).toFixed(1)+'秒）':' 発動');
     }
   }
   function activateSkill(key){
     if(state.skills[key]<1||state.cooldowns[key]>Date.now()||!['playing','cpu'].includes(state.mode))return;
     const duration=skillDuration(key);state.cooldowns[key]=Date.now()+skillCooldown(key);
     if(key==='condom'){state.shieldUntil=Date.now()+duration*1000;status('コンドム発動！ '+duration.toFixed(1)+'秒間バリア！');}
-    else{state.enemySlowUntil=Date.now()+duration*1000;status('賢者タイム発動！ 相手を'+duration.toFixed(1)+'秒間スロー！');}
+    else if(key==='sage'){state.enemySlowUntil=Date.now()+duration*1000;status('賢者タイム発動！ 相手を'+duration.toFixed(1)+'秒間スロー！');}
+    else{const level=state.skills.whiteBeam-1,damage=18+level*6;state.shots.push({x:state.x,y:state.y,life:18,crossBeam:true,level,damage,hit:false});if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x,y:state.y,crossBeam:true,level,damage}});status('白濁ビーム発射！ 4方向に照射！');}
     if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'skill',payload:{uid:state.user.id,key,duration}});
     refreshSkillButtons();
   }
   $('sw-use-condom').addEventListener('click',()=>activateSkill('condom'));
   $('sw-use-sage').addEventListener('click',()=>activateSkill('sage'));
+  $('sw-use-whiteBeam').addEventListener('click',()=>activateSkill('whiteBeam'));
   function setInput(key,on){state.keys[key]=on;}
   const stick=$('sw-stick-base'),knob=$('sw-stick-knob');
   function moveStick(e){
@@ -340,7 +345,7 @@
     const roomId=state.roomId;
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,state.maxHp);}});
-    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,followEnemy:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
+    state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:payload.crossBeam?18:100,beam:!!payload.beam,crossBeam:!!payload.crossBeam,followEnemy:!!payload.beam||!!payload.crossBeam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,60),hit:false});});
     state.room.on('broadcast',{event:'skill'},({payload})=>{if(payload?.uid!==state.opponent)return;if(payload.key==='sage')state.slowUntil=Date.now()+Math.max(0,Math.min(10,Number(payload.duration)||2))*1000;});
     state.room.on('broadcast',{event:'damage'},({payload})=>{if(payload?.uid===state.opponent){if(Date.now()<state.shieldUntil){status('バリアで攻撃を防いだ！');return;}const damage=clamp(payload.damage||12,1,40);state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');if(state.hp<=0)finish(false);}});
     // Opponent damage is delivered through the dedicated damage broadcast.
@@ -443,7 +448,7 @@
       state.enemyShots.push({x:state.ex,y:state.ey,vx:dx/len*speed,vy:dy/len*speed,life:100,damage:18,targeted:true});
     }
     for(let i=state.shots.length-1;i>=0;i--){
-      const s=state.shots[i],x0=s.x,y0=s.y;if(s.followPlayer){s.x=state.x+state.direction*.045;s.y=state.y;}else{s.x+=s.vx;s.y+=(s.vy||0);}s.life--;
+      const s=state.shots[i],x0=s.x,y0=s.y;if(s.crossBeam){s.x=state.x;s.y=state.y;s.life--;const width=.008+s.level*.004;const hit=Math.abs(state.ex-s.x)<=width||Math.abs(state.ey-s.y)<=width;if(hit&&!s.hit){s.hit=true;const damage=clamp(s.damage||18,1,60);state.enemyHp=Math.max(0,state.enemyHp-damage);updateHud();if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'damage',payload:{uid:state.user.id,target:state.opponent,damage}});status('白濁ビーム命中！ −'+damage+' HP');}if(s.life<=0)state.shots.splice(i,1);continue;}if(s.followPlayer){s.x=state.x+state.direction*.045;s.y=state.y;}else{s.x+=s.vx;s.y+=(s.vy||0);}s.life--;
       const radius=s.beam?.032:.065;
       const hit=s.beam?Math.abs(state.ey-s.y)<=radius:segmentHitsPoint(x0,y0,s.x,s.y,state.ex,state.ey,radius);
       if(hit&&s.life>0){
@@ -456,7 +461,7 @@
       if(s.life<=0||s.x<0||s.x>1||s.y<0||s.y>1)state.shots.splice(i,1);
     }
     for(let i=state.enemyShots.length-1;i>=0;i--){
-      const s=state.enemyShots[i],x0=s.x,y0=s.y;if(s.followEnemy){s.x=state.ex-state.direction*.045;s.y=state.ey;}else{s.x+=s.vx;s.y+=(s.vy||0);}s.life--;
+      const s=state.enemyShots[i],x0=s.x,y0=s.y;if(s.crossBeam){s.x=state.ex;s.y=state.ey;s.life--;const width=.008+s.level*.004;const hit=Math.abs(state.x-s.x)<=width||Math.abs(state.y-s.y)<=width;if(hit&&s.life>0){state.enemyShots.splice(i,1);if(state.mode==='cpu'){if(Date.now()<state.shieldUntil){status('バリアで攻撃を防いだ！');continue;}const damage=clamp(s.damage||18,1,60);state.hp=Math.max(0,state.hp-damage);updateHud();status('4方向ビーム被弾！ −'+damage+' HP');if(state.hp<=0){finish(false);return}}continue;}if(s.life<=0)state.enemyShots.splice(i,1);continue;}if(s.followEnemy){s.x=state.ex-state.direction*.045;s.y=state.ey;}else{s.x+=s.vx;s.y+=(s.vy||0);}s.life--;
       const enemyHit=s.beam?Math.abs(state.y-s.y)<=.032:segmentHitsPoint(x0,y0,s.x,s.y,state.x,state.y,.075);
       if(enemyHit&&s.life>0){
         state.enemyShots.splice(i,1);
@@ -494,7 +499,7 @@
       ctx.shadowBlur=0;ctx.font='bold 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#0f172a';ctx.strokeText(label,x,y-42);ctx.fillStyle='#fff';ctx.fillText(label,x,y-42);ctx.restore();
     }
     fighter(px,py,'#2563eb','YOU');fighter(ex,ey,'#ef4444',state.opponent==='CPU'?'CPU':'RIVAL');
-    function orb(s){const x=s.x*w,y=(s.followPlayer?state.y:s.followEnemy?state.ey:s.y)*h,level=s.level||0;ctx.save();if(s.beam){const thick=1.1+level*.35,grad=ctx.createLinearGradient(0,y,w,y);grad.addColorStop(0,'rgba(255,255,255,.08)');grad.addColorStop(.1,'rgba(255,255,255,.9)');grad.addColorStop(.9,'rgba(255,255,255,.9)');grad.addColorStop(1,'rgba(255,255,255,.08)');ctx.shadowColor='#fff';ctx.shadowBlur=3+level*.7;ctx.fillStyle=grad;ctx.fillRect(0,y-thick/2,w,thick);ctx.shadowBlur=1.5;ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(0,y-.45,w,.9);ctx.shadowBlur=3;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,1.5+level*.25,0,Math.PI*2);ctx.fill();}else{const radius=8+level*2.2;ctx.shadowColor='#fff';ctx.shadowBlur=10+level*2;ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(x,y,radius*1.35,radius,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-radius*.25,y-radius*.25,Math.max(2,radius*.25),0,Math.PI*2);ctx.fill()}ctx.restore()}
+    function orb(s){const x=s.x*w,y=(s.followPlayer?state.y:s.followEnemy?state.ey:s.y)*h,level=s.level||0;ctx.save();if(s.crossBeam){const thick=3+level*3,cy=s.y*h,cx=s.x*w;ctx.shadowColor='#fff';ctx.shadowBlur=8+level*2;ctx.strokeStyle='rgba(255,255,255,.92)';ctx.lineWidth=thick;ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(w,cy);ctx.moveTo(cx,0);ctx.lineTo(cx,h);ctx.stroke();ctx.lineWidth=Math.max(1,thick*.35);ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(w,cy);ctx.moveTo(cx,0);ctx.lineTo(cx,h);ctx.stroke();}else if(s.beam){const thick=1.1+level*.35,grad=ctx.createLinearGradient(0,y,w,y);grad.addColorStop(0,'rgba(255,255,255,.08)');grad.addColorStop(.1,'rgba(255,255,255,.9)');grad.addColorStop(.9,'rgba(255,255,255,.9)');grad.addColorStop(1,'rgba(255,255,255,.08)');ctx.shadowColor='#fff';ctx.shadowBlur=3+level*.7;ctx.fillStyle=grad;ctx.fillRect(0,y-thick/2,w,thick);ctx.shadowBlur=1.5;ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillRect(0,y-.45,w,.9);ctx.shadowBlur=3;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x,y,1.5+level*.25,0,Math.PI*2);ctx.fill();}else{const radius=8+level*2.2;ctx.shadowColor='#fff';ctx.shadowBlur=10+level*2;ctx.fillStyle='#f5f5f5';ctx.beginPath();ctx.ellipse(x,y,radius*1.35,radius,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-radius*.25,y-radius*.25,Math.max(2,radius*.25),0,Math.PI*2);ctx.fill()}ctx.restore()}
     state.shots.forEach(orb);state.enemyShots.forEach(orb);
   }
   showHome();
