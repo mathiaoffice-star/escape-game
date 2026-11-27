@@ -51,6 +51,18 @@ const baseAttack=window.playAttack;
 if(typeof baseAttack==='function'&&!window.__voiceFixAttackWrapped){
  window.playAttack=function(){
   if(window.__escapeMasterMute)return;
+  // ンニャァタ選択中は通常のシャマルピーボイスを鳴らさない。
+  // キャラクター側の攻撃ボイス（playNnyaataVoice）は別経路で再生される。
+  let nnyaataSelected=false;
+  try{
+   const characterState=JSON.parse(localStorage.getItem('shamarupiWarV1')||'{}');
+   nnyaataSelected=characterState.selectedCharacter==='nnyaata'&&(characterState.characters||[]).includes('nnyaata');
+  }catch(e){}
+  if(nnyaataSelected){
+   const standardVoice=window.__voiceFixAttack;
+   if(standardVoice){standardVoice.pause();try{standardVoice.currentTime=0;}catch(e){}}
+   return;
+  }
   const audio=window.__voiceFixAttack;
   if(!audio){baseAttack();return;}
   try{
