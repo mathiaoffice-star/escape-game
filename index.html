@@ -127,6 +127,28 @@ for(const src of bootScripts){
   document.body.appendChild(s);
  });
 }
+// 追加モードの入口をメイン画面に必ず表示する独立フォールバック
+(function ensureModeMenuButtons(){
+ if(document.getElementById('shamarupi-visible-menu'))return;
+ const bar=document.createElement('nav');
+ bar.id='shamarupi-visible-menu';
+ bar.setAttribute('aria-label','追加ゲームメニュー');
+ bar.style.cssText='position:fixed;z-index:2147483000;left:10px;right:10px;bottom:max(12px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;padding:8px;background:rgba(15,23,42,.96);border:1px solid #64748b;border-radius:16px;box-shadow:0 5px 22px #0005';
+ const defs=[['⚔ 対戦','shamarupi-entry'],['🎰 ガチャ','shamarupi-gacha-entry'],['⚡ スキル','shamarupi-skill-entry']];
+ defs.forEach(([label,targetId])=>{
+  const b=document.createElement('button');b.type='button';b.textContent=label;
+  b.style.cssText='min-width:0;border:0;border-radius:11px;padding:13px 4px;background:#6d28d9;color:white;font-weight:900;font-size:clamp(12px,3.4vw,15px);white-space:nowrap';
+  b.addEventListener('click',()=>{
+   const target=document.getElementById(targetId);
+   if(target){target.click();return;}
+   let notice=document.getElementById('shamarupi-menu-error');
+   if(!notice){notice=document.createElement('div');notice.id='shamarupi-menu-error';notice.style.cssText='position:fixed;z-index:2147483647;left:12px;right:12px;bottom:82px;padding:12px;background:#fee2e2;color:#991b1b;border-radius:10px;font-weight:700';document.body.appendChild(notice);}
+   notice.textContent='追加機能の初期化に失敗しています。ページを再読み込みしてください。';
+  });
+  bar.appendChild(b);
+ });
+ document.body.appendChild(bar);
+})();
 // ショップカードは拡張スクリプトが作成したDOMを維持する。innerHTMLで再生成すると
 // openAdditionalVoicesに登録済みのイベントが消えるため、ここでは配置だけ整える。
 (function preserveShopVoiceEntry(){
