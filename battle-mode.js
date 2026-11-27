@@ -303,7 +303,13 @@
     const duration=skillDuration(key);state.cooldowns[key]=Date.now()+skillCooldown(key);
     if(key==='condom'){state.shieldUntil=Date.now()+duration*1000;status('コンドム発動！ '+duration.toFixed(1)+'秒間バリア！');}
     else if(key==='sage'){state.enemySlowUntil=Date.now()+duration*1000;status('賢者タイム発動！ 相手を'+duration.toFixed(1)+'秒間スロー！');}
-    else{const level=state.skills.whiteBeam-1,damage=35; // 対戦では一撃にならないよう調整state.shots.push({x:state.x,y:state.y,life:18,crossBeam:true,level,damage,hit:false});if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x,y:state.y,crossBeam:true,level,damage}});status('白濁ビーム発射！ 4方向に照射！');}
+    else{
+      const level=state.skills.whiteBeam-1,damage=35;
+      // 対戦では一撃にならないようダメージを35に調整
+      state.shots.push({x:state.x,y:state.y,life:18,crossBeam:true,level,damage,hit:false});
+      if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'shot',payload:{uid:state.user.id,x:state.x,y:state.y,crossBeam:true,level,damage}});
+      status('白濁ビーム発射！ 4方向に照射！');
+    }
     if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'skill',payload:{uid:state.user.id,key,duration}});
     refreshSkillButtons();
   }
