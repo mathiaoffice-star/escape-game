@@ -111,20 +111,7 @@
         <button id="sw-equip-beam" class="secondary">白濁ビームを装備</button>
       </div>
       <p class="sw-small">プレイヤーHPは150。武器強化で攻撃力・当たり判定が少しずつ上昇します。</p>
-      <div class="sw-gacha">
-        <b>🎰 スキルガチャ</b>
-        <p class="sw-small">1回 3,000コイン ／ 重複するとスキルLvアップ（最大Lv.5）</p>
-        <div class="sw-gacha-lever" id="sw-gacha-lever" aria-label="レバーを下に引いてガチャを回す"><span class="sw-gacha-orb">◯</span><button id="sw-gacha-handle" class="sw-gacha-handle" type="button" aria-label="レバーを引く">U</button><span class="sw-gacha-orb">◯</span></div>
-        <button id="sw-gacha-pull" type="button">ガチャを1回引く（3,000）</button>
-        <div id="sw-gacha-result" class="sw-gacha-result" aria-live="polite">スキルを集めて対戦を有利にしよう！</div>
-        <div class="sw-skill-list">
-          <div class="sw-skill-card"><b>🛡️ コンドム Lv.<span id="sw-condom-level">0</span>/5</b><span>発動中は攻撃を防ぐ。初期持続1秒。</span></div>
-          <div class="sw-skill-card"><b>⏳ 賢者タイム Lv.<span id="sw-sage-level">0</span>/5</b><span>相手の動きを遅くする。初期持続2秒。</span></div>
-          <div class="sw-skill-card"><b>✨ 白濁ビーム（4方向） Lv.<span id="sw-whitebeam-level">0</span>/5</b><span>上下左右へ同時発射。Lvが上がるほどビームが太くなる。</span></div>
-        </div>
-        <p class="sw-small">Lv.5のスキルが重複した場合は金の玉1個に変換されます。</p>
-        <p class="sw-small">所持金の玉：<b id="sw-gold-balls">0</b></p>
-      </div>
+      <div class="sw-actions"><button id="sw-open-gacha" type="button">🎰 スキルガチャ</button></div>
       <div class="sw-actions"><button id="sw-match">ランダムオンライン対戦</button></div>
       <div style="margin-top:18px;border-top:1px solid #ffffff24;padding-top:14px">
         <b>友達と合言葉で対戦</b>
@@ -138,6 +125,25 @@
       </div>
       <p id="sw-status" style="text-align:center;min-height:24px">準備完了</p>
     </section>
+    <section id="sw-gacha-screen" class="sw-panel" hidden>
+      <div class="sw-actions"><button id="sw-gacha-back" class="secondary" type="button">← ホームに戻る</button></div>
+      <h3 style="text-align:center;font-size:25px;margin:12px 0">🎰 スキルガチャ</h3>
+      <p class="sw-small" style="text-align:center">1回 3,000コイン ／ 重複するとスキルLvアップ（最大Lv.5）</p>
+            <div class="sw-gacha">
+        <b>🎰 スキルガチャ</b>
+        <p class="sw-small">1回 3,000コイン ／ 重複するとスキルLvアップ（最大Lv.5）</p>
+        <div class="sw-gacha-lever" id="sw-gacha-lever" aria-label="レバーを下に引いてガチャを回す"><span class="sw-gacha-orb">◯</span><button id="sw-gacha-handle" class="sw-gacha-handle" type="button" aria-label="レバーを引く">U</button><span class="sw-gacha-orb">◯</span></div>
+        <button id="sw-gacha-pull" type="button">ガチャを1回引く（3,000）</button>
+        <div id="sw-gacha-result" class="sw-gacha-result" aria-live="polite">スキルを集めて対戦を有利にしよう！</div>
+        <div class="sw-skill-list">
+          <div class="sw-skill-card"><b>🛡️ コンドム Lv.<span id="sw-condom-level">0</span>/5</b><span>発動中は攻撃を防ぐ。初期持続1秒。</span></div>
+          <div class="sw-skill-card"><b>⏳ 賢者タイム Lv.<span id="sw-sage-level">0</span>/5</b><span>相手の動きを遅くする。初期持続2秒。</span></div>
+          <div class="sw-skill-card"><b>✨ 白濁ビーム（4方向） Lv.<span id="sw-whitebeam-level">0</span>/5</b><span>上下左右へ同時発射。Lvが上がるほどビームが太くなる。</span></div>
+        </div>
+        <p class="sw-small">Lv.5のスキルが重複した場合は金の玉100個に変換されます。</p>
+        <p class="sw-small">所持金の玉：<b id="sw-gold-balls">0</b></p>
+      </div>
+    </section>ion>
     <section id="sw-game" class="sw-panel" hidden>
       <div class="sw-hud">
         <div><div class="sw-hud-label">YOU</div><div class="sw-hp you"><div id="sw-myhp-fill" class="sw-hp-fill"></div><span id="sw-myhp" class="sw-hp-number">150 / 150</span></div></div>
@@ -223,17 +229,19 @@
       refreshShop();
     });
   }
-  $('sw-gacha-pull').addEventListener('click',pullGacha);
   const gachaLever=$('sw-gacha-lever'),gachaHandle=$('sw-gacha-handle');
-  let leverPointer=null,leverTriggered=false;
-  function animateGachaPull(){if(leverTriggered)return;leverTriggered=true;gachaHandle.classList.add('pulling');gachaLever.classList.add('spinning');setTimeout(()=>{gachaHandle.classList.remove('pulling');pullGacha();setTimeout(()=>{gachaLever.classList.remove('spinning');leverTriggered=false;},1250);},240);}
-  gachaHandle.addEventListener('pointerdown',e=>{if($('sw-gacha-pull').disabled)return;e.preventDefault();leverPointer=e.pointerId;gachaHandle.setPointerCapture(e.pointerId);gachaHandle.classList.add('pulling');});
-  gachaHandle.addEventListener('pointerup',e=>{if(leverPointer!==e.pointerId)return;leverPointer=null;animateGachaPull();});
-  gachaHandle.addEventListener('pointercancel',()=>{leverPointer=null;gachaHandle.classList.remove('pulling');});
+  let leverPointer=null,leverStartY=0,leverDelta=0,leverTriggered=false;
+  function animateGachaPull(){if(leverTriggered||$('sw-gacha-pull').disabled)return;leverTriggered=true;gachaHandle.classList.add('pulling');gachaLever.classList.add('spinning');setTimeout(()=>{gachaHandle.classList.remove('pulling');gachaHandle.style.transform='';pullGacha();setTimeout(()=>{gachaLever.classList.remove('spinning');leverTriggered=false;},1250);},240);}
+  gachaHandle.addEventListener('pointerdown',e=>{if($('sw-gacha-pull').disabled||leverTriggered)return;e.preventDefault();leverPointer=e.pointerId;leverStartY=e.clientY;leverDelta=0;gachaHandle.setPointerCapture(e.pointerId);});
+  gachaHandle.addEventListener('pointermove',e=>{if(leverPointer!==e.pointerId)return;leverDelta=Math.max(0,Math.min(48,e.clientY-leverStartY));gachaHandle.style.transform='translateY('+leverDelta+'px)';});
+  gachaHandle.addEventListener('pointerup',e=>{if(leverPointer!==e.pointerId)return;leverPointer=null;gachaHandle.style.transform='';if(leverDelta>=18)animateGachaPull();});
+  gachaHandle.addEventListener('pointercancel',()=>{leverPointer=null;leverDelta=0;gachaHandle.style.transform='';});
   gachaHandle.addEventListener('click',e=>{e.preventDefault();animateGachaPull();});
-  function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
+  function showHome(){ $('sw-home').hidden=false;$('sw-gacha-screen').hidden=true;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
   function open(){modal.style.display='block';showHome();}
-  function openGacha(){open();requestAnimationFrame(()=>{const section=modal.querySelector('.sw-gacha');if(section)section.scrollIntoView({behavior:'smooth',block:'center'});});}
+  function openGacha(){modal.style.display='block';$('sw-home').hidden=true;$('sw-gacha-screen').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;refreshShop();modal.scrollTop=0;}
+  $('sw-open-gacha').addEventListener('click',openGacha);
+  $('sw-gacha-back').addEventListener('click',showHome);
   gachaEntry.addEventListener('click',openGacha);
   function close(){stopGame();modal.style.display='none';}
   entry.onclick=open;$('sw-close').onclick=close;
