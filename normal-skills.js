@@ -51,7 +51,8 @@
     #normalSkillSettings .normal-skill-card small{display:block;color:#64748b;font-size:11px;margin-top:3px}
     #normalSkillSettings .normal-skill-card input{width:22px;height:22px;accent-color:#7c3aed}
     #normalSkillControls{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin:10px 0}
-    #normalSkillControls button{flex:1 1 30%;min-width:92px;min-height:48px;border:0;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:900;font-size:12px;padding:7px}
+    #normalSkillControls{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;align-items:center;margin:10px auto;max-width:100%}
+    #normalSkillControls button{flex:0 1 auto;width:clamp(116px,38vw,168px);max-width:46%;min-width:0;min-height:44px;height:auto;border:0;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:900;font-size:12px;line-height:1.25;padding:8px 6px;white-space:normal;box-sizing:border-box}
     #normalSkillControls button:disabled{opacity:.42}
     #normalSkillControls button .skill-cd{display:block;font-size:10px;font-weight:700;margin-top:3px}
     #normalSkillStatus{min-height:20px;text-align:center;font-size:12px;font-weight:800;color:#7c3aed;margin:3px 0 8px}
@@ -176,6 +177,23 @@
       target.appendChild(panel); refreshSettings();
     }
   }
+  // 「もう一度」で新しいランを始めたら、スキルのクールタイムも初期化
+  function resetSkillCooldowns() {
+    const now = performance.now();
+    Object.keys(META).forEach(key => { readyAt[key] = 0; });
+    shieldUntil = 0; slowUntil = 0; beamUntil = 0;
+    lastUsed = null;
+    refreshControls(now);
+    setStatus('スキルのクールタイムをリセットしました');
+  }
+  const restartButton = document.getElementById('restartBtn');
+  if (restartButton) {
+    restartButton.addEventListener('click', () => {
+      // 元の再スタート処理が gameActive / gameOver を更新した後にUIを同期
+      setTimeout(() => { resetSkillCooldowns(); refreshControls(); }, 0);
+    });
+  }
+
   const attackButton = document.getElementById('attackBtn');
   if (attackButton && attackButton.parentElement) {
     controls = document.createElement('div'); controls.id = 'normalSkillControls'; controls.hidden = true;
