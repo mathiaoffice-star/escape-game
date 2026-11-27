@@ -130,6 +130,45 @@ for(const src of bootScripts){
   document.body.appendChild(s);
  });
 }
+// 追加メニューは代理ボタンではなく、battle-mode.jsがイベント登録した本物のボタンを使う。
+(function connectRealModeButtons(){
+ const nav=document.getElementById('shamarupi-visible-menu');
+ if(!nav)return;
+ const ids=['shamarupi-entry','shamarupi-gacha-entry','shamarupi-skill-entry'];
+ const actual=ids.map(id=>document.getElementById(id));
+ nav.replaceChildren();
+ const labels=['⚔ 対戦','🎰 ガチャ','⚡ スキル'];
+ actual.forEach((button,index)=>{
+  if(!button){
+   const fallback=document.createElement('div');
+   fallback.textContent=labels[index]+'（読み込み失敗）';
+   fallback.style.cssText='padding:13px 4px;text-align:center;color:#666;font-weight:800;background:#fff;border-radius:16px';
+   nav.appendChild(fallback);
+   return;
+  }
+  button.textContent=labels[index];
+  button.style.setProperty('display','inline-flex','important');
+  button.style.setProperty('align-items','center','important');
+  button.style.setProperty('justify-content','center','important');
+  button.style.setProperty('width','100%','important');
+  button.style.setProperty('min-width','0','important');
+  button.style.setProperty('margin','0','important');
+  button.style.setProperty('padding','13px 4px','important');
+  button.style.setProperty('border','0','important');
+  button.style.setProperty('border-radius','16px','important');
+  button.style.setProperty('background','#fff','important');
+  button.style.setProperty('color','#171717','important');
+  button.style.setProperty('font-weight','900','important');
+  button.style.setProperty('font-size','clamp(12px,3.4vw,15px)','important');
+  button.style.setProperty('box-shadow','0 1px 5px #0001','important');
+  button.style.setProperty('white-space','nowrap','important');
+  nav.appendChild(button);
+ });
+ const launcher=document.getElementById('shamarupi-launcher');
+ if(launcher)launcher.style.setProperty('display','none','important');
+ if(actual.every(Boolean))console.info('[game loader] connected real mode buttons');
+ else console.error('[game loader] one or more real mode buttons were not initialized');
+})();
 // 追加モードの入口をメイン画面に必ず表示する独立フォールバック
 (function ensureModeMenuButtons(){
  if(document.getElementById('shamarupi-visible-menu'))return;
