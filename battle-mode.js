@@ -16,7 +16,7 @@
   state.weapon = saved.weapon==='beam' && state.beamUnlocked ? 'beam':'orb';
   state.skills={condom:Math.max(0,Math.min(5,Number(saved.skills?.condom)||0)),sage:Math.max(0,Math.min(5,Number(saved.skills?.sage)||0)),whiteBeam:Math.max(0,Math.min(5,Number(saved.skills?.whiteBeam)||0))};
   state.goldBalls=Math.max(0,Number(saved.goldBalls)||0);
-  state.characters=Array.isArray(saved.characters)?saved.characters.filter(x=>x==='nnyaata'):[];
+  state.characters=Array.isArray(saved.characters)?saved.characters.filter(x=>x==='nnyaata'||x==='senpai'):[];
   state.selectedCharacter=state.characters.includes(saved.selectedCharacter)?saved.selectedCharacter:'default';
   function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon,orbLevel:state.orbLevel,beamUnlocked:state.beamUnlocked,beamLevel:state.beamLevel,skills:state.skills,goldBalls:state.goldBalls,characters:state.characters,selectedCharacter:state.selectedCharacter}))}catch(e){}}
   function notifyCharacterChange(){window.dispatchEvent(new CustomEvent('shamarupi-character-change',{detail:{id:state.selectedCharacter,image:state.selectedCharacter==='nnyaata'?'./characters/nnyaata.jpg':null}}));}
