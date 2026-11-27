@@ -5,6 +5,7 @@
   window.__nnyaataCharacterSystemLoaded = true;
   const STORE='shamarupiWarV1';
   const IMAGE='./characters/nnyaata.jpg';
+  const SENPAI_IMAGE='./characters/senpai.jpg';
   const DEFAULT_IMAGE='./characters/default-character.jpg';
   const VOICE='./audio/nnyaata.mp3';
   const read=()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(_){return {}}};
@@ -23,9 +24,11 @@
     window.__nnyaataMediaPlayGuard=true;
   }
   let lastVoiceAt=0;
-  function isSelected(){return read().selectedCharacter==='nnyaata' && (read().characters||[]).includes('nnyaata');}
+  function isSelected(){const saved=read();return saved.selectedCharacter==='nnyaata' && (saved.characters||[]).includes('nnyaata');}
+  function isSenpaiSelected(){const saved=read();return saved.selectedCharacter==='senpai' && (saved.characters||[]).includes('senpai');}
+  function isCustomCharacterSelected(){return isSelected()||isSenpaiSelected();}
   function playVoice(){
-    if(!isSelected())return;
+    if(!isCustomCharacterSelected())return;
     const now=performance.now();
     if(now-lastVoiceAt<90)return;
     lastVoiceAt=now;
@@ -33,18 +36,20 @@
   }
   const characterImages={
     nnyaata:new Image(),
+    senpai:new Image(),
     default:new Image()
   };
   characterImages.nnyaata.src=IMAGE;
+  characterImages.senpai.src=SENPAI_IMAGE;
   characterImages.default.src=DEFAULT_IMAGE;
   function selectedImage(){
-    return isSelected()?characterImages.nnyaata:characterImages.default;
+    return isSelected()?characterImages.nnyaata:isSenpaiSelected()?characterImages.senpai:characterImages.default;
   }
   function applyCharacter(){
     window.__defaultCharacterImage=DEFAULT_IMAGE;
     const defaultCardImage=document.getElementById('sw-default-image');
     if(defaultCardImage && defaultCardImage.getAttribute('src')!==DEFAULT_IMAGE)defaultCardImage.src=DEFAULT_IMAGE;
-    const chosen=isSelected()?IMAGE:DEFAULT_IMAGE;
+    const chosen=isSelected()?IMAGE:isSenpaiSelected()?SENPAI_IMAGE:DEFAULT_IMAGE;
     // 通常モードが実際に描画で使う playerImg を直接更新する。
     // さらに描画関数側でも選択画像を差し替え、reset等で画像が戻されても反映を維持する。
     try {
@@ -55,7 +60,7 @@
     const img=document.getElementById('playerImg')||document.querySelector('img[data-player-image]');
     if(img && img.getAttribute('src')!==chosen)img.src=chosen;
     window.__shamarupiCharacterImage=chosen;
-    window.__shamarupiSelectedCharacter=isSelected()?'nnyaata':'default';
+    window.__shamarupiSelectedCharacter=isSelected()?'nnyaata':isSenpaiSelected()?'senpai':'default';
   }
   // 通常ゲームの描画処理に選択キャラを直接渡す保険。
   // playerImg の初期化順や reset 時の src 再設定に左右されず、プレイヤー描画だけを切り替える。
@@ -83,7 +88,7 @@
     return new Set(Array.from(document.querySelectorAll('audio,video')).filter(el=>!el.paused));
   }
   function silenceNewAttackMedia(before){
-    if(!isSelected())return;
+    if(!isCustomCharacterSelected())return;
     document.querySelectorAll('audio,video').forEach(el=>{
       if(el===audio || el===window.__nnyaataVoiceAudio || before.has(el))return;
       if(!el.paused){
@@ -111,7 +116,7 @@
     }
   },false);
   window.addEventListener('shamarupi-character-change',e=>{
-    if(e.detail?.id==='nnyaata'||e.detail?.id==='default')applyCharacter();
+    if(e.detail?.id==='nnyaata'||e.detail?.id==='senpai'||e.detail?.id==='default')applyCharacter();
   });
   document.addEventListener('DOMContentLoaded',applyCharacter);
   applyCharacter();
