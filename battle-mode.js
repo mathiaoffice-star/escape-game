@@ -157,7 +157,7 @@
         </div>
         <p class="sw-small">Lv.5のスキルが重複した場合は金の玉100個に変換されます。</p>
         <p class="sw-small">所持金の玉：<b id="sw-gold-balls">0</b></p>
-        <div class="sw-character-book"><h3>📖 キャラクター図鑑</h3><div class="sw-character-card"><img src="./characters/nnyaata.jpg" alt="ンニャァタ" id="sw-nnyaata-image"><div><b>ンニャァタ</b><p id="sw-nnyaata-status">？？？ 未入手</p><button id="sw-select-nnyaata" type="button" disabled>このキャラを選択</button></div></div><div class="sw-character-card" style="margin-top:8px"><img id="sw-default-image" src="./characters/default-character.jpg?v=1" alt="初期キャラクター" style="width:84px;height:84px;border-radius:12px;object-fit:cover;background:#cbd5e1"><div><b>初期キャラクター</b><p id="sw-default-status">いつでも選択できます</p><button id="sw-select-default" type="button">初期キャラに戻す</button></div></div><p class="sw-small">入手したキャラクターは通常モード・対戦モードで使用できます。</p></div>
+        <div class="sw-character-book"><h3>📖 キャラクター図鑑</h3><div class="sw-character-card"><img src="./characters/nnyaata.jpg" alt="ンニャァタ" id="sw-nnyaata-image"><div><b>ンニャァタ</b><p id="sw-nnyaata-status">？？？ 未入手</p><button id="sw-select-nnyaata" type="button" disabled>このキャラを選択</button></div></div><div class="sw-character-card" style="margin-top:8px"><div style="width:84px;height:84px;flex:0 0 84px;border-radius:12px;background:linear-gradient(135deg,#334155,#64748b);display:grid;place-items:center;font-size:34px">🎤</div><div><b>センパイ</b><p id="sw-senpai-status">？？？ 未入手</p><span class="sw-small">ガチャ限定キャラクター</span></div></div><div class="sw-character-card" style="margin-top:8px"><img id="sw-default-image" src="./characters/default-character.jpg?v=1" alt="初期キャラクター" style="width:84px;height:84px;border-radius:12px;object-fit:cover;background:#cbd5e1"><div><b>初期キャラクター</b><p id="sw-default-status">いつでも選択できます</p><button id="sw-select-default" type="button">初期キャラに戻す</button></div></div><p class="sw-small">入手したキャラクターは通常モード・対戦モードで使用できます。</p></div>
       </div>
     </section>ion>
     <section id="sw-game" class="sw-panel" hidden>
@@ -233,19 +233,23 @@
     $('sw-whitebeam-level').textContent=state.skills.whiteBeam;
     $('sw-gold-balls').textContent=state.goldBalls.toLocaleString('ja-JP');
     $('sw-nnyaata-status').textContent=state.characters.includes('nnyaata')?'✅ 入手済み'+(state.selectedCharacter==='nnyaata'?' ／ 選択中':''):'？？？ 未入手';
+    $('sw-senpai-status').textContent=state.characters.includes('senpai')?'✅ 入手済み':'？？？ 未入手';
     $('sw-select-nnyaata').disabled=!state.characters.includes('nnyaata')||state.selectedCharacter==='nnyaata';
     $('sw-select-nnyaata').textContent=state.selectedCharacter==='nnyaata'?'選択中':'このキャラを選択';
     $('sw-default-status').textContent=state.selectedCharacter==='default'?'✅ 選択中':'いつでも選択できます';
     $('sw-select-default').disabled=state.selectedCharacter==='default';
   }
-  const gachaPool=[{type:'skill',key:'condom',name:'コンドム'},{type:'skill',key:'sage',name:'賢者タイム'},{type:'skill',key:'whiteBeam',name:'白濁ビーム（4方向）'},{type:'character',key:'nnyaata',name:'ンニャァタ'}];
+  const gachaPool=[{type:'skill',key:'condom',name:'コンドム'},{type:'skill',key:'sage',name:'賢者タイム'},{type:'skill',key:'whiteBeam',name:'白濁ビーム（4方向）'},{type:'character',key:'nnyaata',name:'ンニャァタ'},{type:'character',key:'senpai',name:'センパイ'}];
   function pullGacha(){
     if(coinBalance()<3000){$('sw-gacha-result').textContent='コインが足りません。3,000コイン必要です。';return;}
     chargeBattleCoins(3000,'スキルガチャ',()=>{
       const item=gachaPool[Math.floor(Math.random()*gachaPool.length)];
       if(item.type==='character'){
-        if(!state.characters.includes('nnyaata')){state.characters.push('nnyaata');state.selectedCharacter='nnyaata';persist();notifyCharacterChange();$('sw-gacha-result').textContent='🎉 NEW CHARACTER！ンニャァタを獲得！自動で選択しました！';}
-        else{state.goldBalls+=100;persist();$('sw-gacha-result').textContent='🎉 ンニャァタは入手済み！重複分を金の玉100個に変換しました。';}
+        if(!state.characters.includes(item.key)){
+          state.characters.push(item.key);persist();
+          if(item.key==='nnyaata'){state.selectedCharacter='nnyaata';persist();notifyCharacterChange();$('sw-gacha-result').textContent='🎉 NEW CHARACTER！ンニャァタを獲得！自動で選択しました！';}
+          else{$('sw-gacha-result').textContent='🎉 NEW CHARACTER！センパイを獲得！キャラクター図鑑に登録しました！';}
+        }else{state.goldBalls+=100;persist();$('sw-gacha-result').textContent='🎉 '+item.name+' は入手済み！重複分を金の玉100個に変換しました。';}
       }else{
         const old=state.skills[item.key];
         if(old<5){state.skills[item.key]=old+1;persist();$('sw-gacha-result').textContent='✨ '+item.name+' を獲得！ Lv.'+old+' → Lv.'+(old+1);}
