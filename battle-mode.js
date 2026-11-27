@@ -154,7 +154,11 @@
   </div>`;
   document.body.append(modal);
   function placeBattleEntry(){
-    if(entry.isConnected&&gachaEntry.isConnected)return true;
+    if(entry.isConnected){
+      if(!gachaEntry.isConnected)entry.insertAdjacentElement('afterend',gachaEntry);
+      return true;
+    }
+    if(gachaEntry.isConnected)return true;
     const candidates=[...document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]')];
     let start=candidates.find(el=>/ゲームスタート|ゲーム開始|スタート/.test((el.innerText||el.value||'').replace(/\\s/g,'')));
     if(!start){
