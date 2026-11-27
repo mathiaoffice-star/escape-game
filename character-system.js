@@ -20,23 +20,22 @@
     try{audio.pause();audio.currentTime=0;const p=audio.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
   }
   function applyCharacter(){
-    // 図鑑画像はプレイヤー本体の画像要素が無くても必ず更新する
     window.__defaultCharacterImage=DEFAULT_IMAGE;
     const defaultCardImage=document.getElementById('sw-default-image');
     if(defaultCardImage && defaultCardImage.getAttribute('src')!==DEFAULT_IMAGE)defaultCardImage.src=DEFAULT_IMAGE;
-    const img=document.getElementById('playerImg')||document.querySelector('img[data-player-image]');
-    if(!img)return;
-    if(!img.dataset.nnyaataOriginalSrc)img.dataset.nnyaataOriginalSrc=img.currentSrc||img.src;
     const chosen=isSelected()?'./characters/nnyaata.jpg':DEFAULT_IMAGE;
-    if(img.src!==new URL(chosen,document.baseURI).href)img.src=chosen;
-    if(window.playerImg instanceof HTMLImageElement)window.playerImg.src=chosen;
+    // 通常ゲームの playerImg はメインスクリプト内のトップレベル const なので window.playerImg ではなく字句束縛を更新する
+    try { if(typeof playerImg!=='undefined' && playerImg instanceof HTMLImageElement && playerImg.getAttribute('src')!==chosen) playerImg.src=chosen; }
+    catch(error) { console.warn('[character] normal player image update failed',error); }
+    const img=document.getElementById('playerImg')||document.querySelector('img[data-player-image]');
+    if(img && img.getAttribute('src')!==chosen)img.src=chosen;
     window.__shamarupiCharacterImage=chosen;
   }
   window.__defaultCharacterImage=DEFAULT_IMAGE;
   window.dispatchEvent(new CustomEvent('shamarupi-character-change',{detail:{id:'default',image:DEFAULT_IMAGE}}));
   window.playNnyaataVoice=playVoice;
   window.addEventListener('shamarupi-character-change',e=>{
-    if(e.detail?.id==='nnyaata')applyCharacter();
+    if(e.detail?.id==='nnyaata'||e.detail?.id==='default')applyCharacter();
   });
   document.addEventListener('DOMContentLoaded',applyCharacter);
   applyCharacter();
