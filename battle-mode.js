@@ -174,8 +174,9 @@
   </div>`;
   document.body.append(modal);
   // メニューの文言やDOM構造に依存せず、常に表示されるランチャーへ配置
+  let launcher;
   function placeBattleEntry(){
-    let launcher=document.getElementById('shamarupi-launcher');
+    launcher=document.getElementById('shamarupi-launcher');
     if(!launcher){
       launcher=document.createElement('div');
       launcher.id='shamarupi-launcher';
