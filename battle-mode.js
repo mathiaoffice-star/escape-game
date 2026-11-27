@@ -157,7 +157,7 @@
         </div>
         <p class="sw-small">Lv.5のスキルが重複した場合は金の玉100個に変換されます。</p>
         <p class="sw-small">所持金の玉：<b id="sw-gold-balls">0</b></p>
-        <div class="sw-character-book"><h3>📖 キャラクター図鑑</h3><div class="sw-character-card"><img src="./characters/nnyaata.jpg" alt="ンニャァタ" id="sw-nnyaata-image"><div><b>ンニャァタ</b><p id="sw-nnyaata-status">？？？ 未入手</p><button id="sw-select-nnyaata" type="button" disabled>このキャラを選択</button></div></div><div class="sw-character-card" style="margin-top:8px"><div style="width:84px;height:84px;border-radius:12px;background:#cbd5e1;color:#334155;display:grid;place-items:center;font-size:30px">🙂</div><div><b>初期キャラクター</b><p id="sw-default-status">いつでも選択できます</p><button id="sw-select-default" type="button">初期キャラに戻す</button></div></div><p class="sw-small">入手したキャラクターは通常モード・対戦モードで使用できます。</p></div>
+        <div class="sw-character-book"><h3>📖 キャラクター図鑑</h3><div class="sw-character-card"><img src="./characters/nnyaata.jpg" alt="ンニャァタ" id="sw-nnyaata-image"><div><b>ンニャァタ</b><p id="sw-nnyaata-status">？？？ 未入手</p><button id="sw-select-nnyaata" type="button" disabled>このキャラを選択</button></div></div><div class="sw-character-card" style="margin-top:8px"><img id="sw-default-image" alt="初期キャラクター" style="width:84px;height:84px;border-radius:12px;object-fit:cover;background:#cbd5e1"><div><b>初期キャラクター</b><p id="sw-default-status">いつでも選択できます</p><button id="sw-select-default" type="button">初期キャラに戻す</button></div></div><p class="sw-small">入手したキャラクターは通常モード・対戦モードで使用できます。</p></div>
       </div>
     </section>ion>
     <section id="sw-game" class="sw-panel" hidden>
