@@ -4,6 +4,23 @@
     console.error('[fever] main-game hooks unavailable'); return;
   }
   let feverUntil=0, feverActive=false, feverVoice=null, voiceReady=false;
+  // センパイ選択時だけFEVER中のBGMを専用曲へ切り替える。
+  const senpaiFeverBgm=new Audio('./audio/senpai-bgm.ogg');
+  senpaiFeverBgm.preload='auto';senpaiFeverBgm.loop=true;senpaiFeverBgm.playsInline=true;
+  let senpaiBgmActive=false;
+  function isSenpaiSelected(){try{const s=JSON.parse(localStorage.getItem('shamarupiWarV1')||'{}');return s.selectedCharacter==='senpai'&&(s.characters||[]).includes('senpai');}catch(e){return false;}}
+  function startSenpaiFeverBgm(){
+    if(!isSenpaiSelected()||senpaiBgmActive)return;
+    senpaiBgmActive=true;
+    try{if(typeof bgmAudio!=='undefined'){bgmAudio.pause();bgmAudio.currentTime=0;bgmStarted=false;}}catch(e){}
+    try{const v=document.getElementById('bgmVolume');if(v)senpaiFeverBgm.volume=Math.max(0,Math.min(1,Number(v.value)/100));const p=senpaiFeverBgm.play();if(p)p.catch(()=>{senpaiBgmActive=false;});}catch(e){senpaiBgmActive=false;}
+  }
+  function stopSenpaiFeverBgm(){
+    if(!senpaiBgmActive)return;
+    senpaiBgmActive=false;
+    try{senpaiFeverBgm.pause();senpaiFeverBgm.currentTime=0;}catch(e){}
+    try{if(typeof bgmAudio!=='undefined'){bgmStarted=false;if(typeof startBGM==='function')startBGM();}}catch(e){}
+  }
   const FEVER_MS=5000, FEVER_STEP=10;
   let nextFeverAt=FEVER_STEP;
   let lastKills=0;
@@ -31,7 +48,9 @@
       feverVoice.preload='auto'; feverVoice.playsInline=true; voiceReady=true;
     }).catch(e=>console.warn('[fever] voice could not load',e));
   function startFever(){
+    const wasActive=feverActive;
     feverActive=true; feverUntil=performance.now()+FEVER_MS;
+    if(!wasActive)startSenpaiFeverBgm();
     if(voiceReady&&feverVoice){try{const volume=document.getElementById('voiceVolume');feverVoice.volume=Math.max(0,Math.min(1,Number(volume?.value??100)/100));feverVoice.pause();feverVoice.currentTime=0;const p=feverVoice.play();if(p)p.catch(()=>{});}catch(e){}}
   }
   const originalAttack=performAttackHit;
@@ -51,7 +70,7 @@
     checkFeverTrigger();
     originalUpdate.apply(this,arguments);
     if(!feverActive)return;
-    if(now>=feverUntil){feverActive=false;return;}
+    if(now>=feverUntil){feverActive=false;stopSenpaiFeverBgm();return;}
     // During FEVER, touching an enemy defeats it instead of ending the run.
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i];
