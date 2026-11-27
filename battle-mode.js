@@ -477,7 +477,7 @@
       if(typeof startBGM==='function')startBGM();
     }catch(e){console.warn('battle audio unavailable',e)}
   }
-  function playAttackAudio(){startBattleAudio();playVoiceBuffer(attackVoiceBuffer)}
+  function playAttackAudio(){startBattleAudio();if(window.playNnyaataVoice){window.playNnyaataVoice();if((()=>{try{const v=JSON.parse(localStorage.getItem(STORE)||'{}');return v.selectedCharacter==='nnyaata'&&(v.characters||[]).includes('nnyaata')}catch(e){return false}})())return;}playVoiceBuffer(attackVoiceBuffer)}
   function segmentHitsPoint(x1,y1,x2,y2,px,py,r){
     const dx=x2-x1,dy=y2-y1,len=dx*dx+dy*dy;
     const t=len?clamp(((px-x1)*dx+(py-y1)*dy)/len,0,1):0;
