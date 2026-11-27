@@ -20,6 +20,7 @@
   style.textContent = `
   #shamarupi-entry,#shamarupi-gacha-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005;vertical-align:middle;cursor:pointer}
   #shamarupi-gacha-entry{background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 5px 18px #f59e0b55}
+  #shamarupi-skill-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#0f766e,#0891b2);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0f766e55;vertical-align:middle;cursor:pointer}
   #shamarupi-modal{position:fixed;inset:0;z-index:99999;background:radial-gradient(circle at 50% 0,#263c62,#080d19 72%);color:#fff;font-family:system-ui,sans-serif;display:none;overflow:auto;padding:16px;box-sizing:border-box}
   #shamarupi-modal *{box-sizing:border-box}#shamarupi-modal .sw-wrap{max-width:760px;margin:0 auto}
   #shamarupi-modal h2{text-align:center;font-size:clamp(26px,6vw,42px);margin:12px 0 4px;color:#f5eaff;text-shadow:0 3px 18px #c026d366}
@@ -86,6 +87,7 @@
   document.head.appendChild(style);
   const entry=document.createElement('button');entry.id='shamarupi-entry';entry.type='button';entry.textContent='⚔ 対戦モード';
   const gachaEntry=document.createElement('button');gachaEntry.id='shamarupi-gacha-entry';gachaEntry.type='button';gachaEntry.textContent='🎰 ガチャ';
+  const skillEntry=document.createElement('button');skillEntry.id='shamarupi-skill-entry';skillEntry.type='button';skillEntry.textContent='⚡ スキル設定';skillEntry.title='ガチャで獲得したスキルの装備を変更';
   const modal=document.createElement('div');modal.id='shamarupi-modal';
   modal.innerHTML=`<div class="sw-wrap">
     <div class="sw-actions"><button class="secondary" id="sw-close">タイトルへ戻る</button></div>
@@ -170,9 +172,14 @@
   function placeBattleEntry(){
     if(entry.isConnected){
       if(!gachaEntry.isConnected)entry.insertAdjacentElement('afterend',gachaEntry);
+      if(!skillEntry.isConnected)gachaEntry.insertAdjacentElement('afterend',skillEntry);
       return true;
     }
-    if(gachaEntry.isConnected)return true;
+    if(gachaEntry.isConnected){
+      if(!skillEntry.isConnected)gachaEntry.insertAdjacentElement('afterend',skillEntry);
+      return true;
+    }
+    if(skillEntry.isConnected)return true;
     const candidates=[...document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]')];
     const isStart=el=>{
       const label=String(el.innerText||el.value||el.textContent||'').toUpperCase().replaceAll(' ','');
@@ -186,6 +193,7 @@
     if(start){
       start.insertAdjacentElement('afterend',entry);
       entry.insertAdjacentElement('afterend',gachaEntry);
+      gachaEntry.insertAdjacentElement('afterend',skillEntry);
       return true;
     }
     return false;
@@ -243,6 +251,21 @@
   $('sw-open-gacha').addEventListener('click',openGacha);
   $('sw-gacha-back').addEventListener('click',showHome);
   gachaEntry.addEventListener('click',openGacha);
+  skillEntry.addEventListener('click',()=>{
+    // スキル取得後の装備チェックは通常モードと共通の設定画面で管理する
+    close();
+    const settingsButton=document.querySelector('[data-open="settingsScreen"]');
+    if(settingsButton){settingsButton.click();}
+    else if(typeof showScreen==='function'){showScreen('settingsScreen');}
+    setTimeout(()=>{
+      const panel=document.getElementById('normalSkillSettings');
+      if(panel){panel.scrollIntoView({behavior:'smooth',block:'start'});}
+      else{
+        const status=document.getElementById('shopStatus');
+        if(status)status.textContent='スキル設定を読み込み中です。画面を再読み込みしてください。';
+      }
+    },120);
+  });
   function close(){stopGame();modal.style.display='none';}
   entry.onclick=open;$('sw-close').onclick=close;
   function status(t){$('sw-status').textContent=t;}
