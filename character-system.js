@@ -11,12 +11,21 @@
   const read=()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(_){return {}}};
   const audio=new Audio(VOICE);
   audio.preload='auto';
+  const SENPAI_ATTACK='./audio/senpai-attack.ogg';
+  const senpaiAudio=new Audio(SENPAI_ATTACK);
+  senpaiAudio.preload='auto';
+  window.__senpaiVoiceAudio=senpaiAudio;
+  function playSenpaiVoice(){
+    if(!isSenpaiSelected())return;
+    try{senpaiAudio.pause();senpaiAudio.currentTime=0;const p=senpaiAudio.play();if(p)p.catch(()=>{});}catch(e){}
+  }
+  window.playSenpaiVoice=playSenpaiVoice;
   // Block every other audio.play() invoked by the same attack input while Nnyaata is selected.
   // This also catches detached new Audio() instances that cannot be found in the DOM.
   if(!window.__nnyaataMediaPlayGuard){
     const nativeMediaPlay=HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play=function(){
-      if(window.__nnyaataAttackInput && this!==window.__nnyaataVoiceAudio && this!==audio){
+      if(window.__customCharacterAttackInput && this!==window.__nnyaataVoiceAudio && this!==audio && this!==window.__senpaiVoiceAudio){
         return Promise.resolve();
       }
       return nativeMediaPlay.apply(this,arguments);
@@ -88,7 +97,7 @@
     return new Set(Array.from(document.querySelectorAll('audio,video')).filter(el=>!el.paused));
   }
   function silenceNewAttackMedia(before){
-    if(!isSelected())return;
+    if(!isCustomCharacterSelected())return;
     document.querySelectorAll('audio,video').forEach(el=>{
       if(el===audio || el===window.__nnyaataVoiceAudio || before.has(el))return;
       if(!el.paused){
@@ -98,21 +107,21 @@
   }
   let clickMediaBefore=null, keyMediaBefore=null;
   document.addEventListener('click',e=>{
-    if(e.target?.closest?.('#attackBtn')){window.__nnyaataAttackInput=isSelected();clickMediaBefore=capturePlayingMedia();}
+    if(e.target?.closest?.('#attackBtn')){window.__nnyaataAttackInput=isSelected();window.__customCharacterAttackInput=isCustomCharacterSelected();clickMediaBefore=capturePlayingMedia();}
   },true);
   document.addEventListener('click',e=>{
     if(!e.target?.closest?.('#attackBtn'))return;
     silenceNewAttackMedia(clickMediaBefore||new Set());
-    clickMediaBefore=null;window.__nnyaataAttackInput=false;
+    clickMediaBefore=null;window.__nnyaataAttackInput=false;window.__customCharacterAttackInput=false;
   },false);
   document.addEventListener('keydown',e=>{
     const tag=(document.activeElement?.tagName||'').toLowerCase();
-    if((e.code==='Space'||e.key===' ')&&!e.repeat&&tag!=='input'&&tag!=='textarea'&&tag!=='button'){window.__nnyaataAttackInput=isSelected();keyMediaBefore=capturePlayingMedia();}
+    if((e.code==='Space'||e.key===' ')&&!e.repeat&&tag!=='input'&&tag!=='textarea'&&tag!=='button'){window.__nnyaataAttackInput=isSelected();window.__customCharacterAttackInput=isCustomCharacterSelected();keyMediaBefore=capturePlayingMedia();}
   },true);
   document.addEventListener('keydown',e=>{
     if((e.code==='Space'||e.key===' ')&&!e.repeat){
       silenceNewAttackMedia(keyMediaBefore||new Set());
-      keyMediaBefore=null;window.__nnyaataAttackInput=false;
+      keyMediaBefore=null;window.__nnyaataAttackInput=false;window.__customCharacterAttackInput=false;
     }
   },false);
   window.addEventListener('shamarupi-character-change',e=>{
@@ -122,12 +131,12 @@
   applyCharacter();
   document.addEventListener('click',e=>{
     const btn=e.target?.closest?.('#attackBtn');
-    if(btn)playVoice();
+    if(btn){if(isSelected())playVoice();else if(isSenpaiSelected())playSenpaiVoice();}
   },true);
   document.addEventListener('keydown',e=>{
     if((e.code==='Space'||e.key===' ')&&!e.repeat){
       const tag=(document.activeElement?.tagName||'').toLowerCase();
-      if(tag!=='input'&&tag!=='textarea'&&tag!=='button')playVoice();
+      if(tag!=='input'&&tag!=='textarea'&&tag!=='button'){if(isSelected())playVoice();else if(isSenpaiSelected())playSenpaiVoice();}
     }
   },true);
   const observer=new MutationObserver(()=>{applyCharacter();});
