@@ -6,14 +6,16 @@
   const SUPABASE_URL = 'https://caittxvisaqpcrurqgag.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_VBhQe8t5WtKR39XluwRZJg_sKrbieI7';
   const STORE = 'shamarupiWarV1';
-  const state = { mode:'idle', user:null, lobby:null, room:null, opponent:null, started:0, hp:150, enemyHp:150, maxHp:150, x:0.18, y:0.5, ex:0.82, ey:0.5, shots:[], enemyShots:[], keys:{}, lastShot:0, lastSync:0, raf:0, wins:0, rating:1000, weapon:'orb', orbLevel:0, beamUnlocked:false, beamLevel:0, ended:false, cpuAt:0, roomId:null };
+  const state = { mode:'idle', user:null, lobby:null, room:null, opponent:null, started:0, hp:150, enemyHp:150, maxHp:150, x:0.18, y:0.5, ex:0.82, ey:0.5, shots:[], enemyShots:[], keys:{}, lastShot:0, lastSync:0, raf:0, wins:0, rating:1000, weapon:'orb', orbLevel:0, beamUnlocked:false, beamLevel:0, ended:false, cpuAt:0, roomId:null, skills:{condom:0,sage:0}, goldBalls:0, cooldowns:{condom:0,sage:0}, shieldUntil:0, slowUntil:0, enemySlowUntil:0 };
   const saved = (()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(e){return {}}})();
   state.wins = Number(saved.wins)||0;
   state.orbLevel = Math.max(0,Math.min(5,Number(saved.orbLevel)||0));
   state.beamUnlocked = !!saved.beamUnlocked || saved.weapon==='beam';
   state.beamLevel = Math.max(0,Math.min(5,Number(saved.beamLevel)||0));
   state.weapon = saved.weapon==='beam' && state.beamUnlocked ? 'beam':'orb';
-  function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon,orbLevel:state.orbLevel,beamUnlocked:state.beamUnlocked,beamLevel:state.beamLevel}))}catch(e){}}
+  state.skills={condom:Math.max(0,Math.min(5,Number(saved.skills?.condom)||0)),sage:Math.max(0,Math.min(5,Number(saved.skills?.sage)||0))};
+  state.goldBalls=Math.max(0,Number(saved.goldBalls)||0);
+  function persist(){try{localStorage.setItem(STORE,JSON.stringify({wins:state.wins,weapon:state.weapon,orbLevel:state.orbLevel,beamUnlocked:state.beamUnlocked,beamLevel:state.beamLevel,skills:state.skills,goldBalls:state.goldBalls}))}catch(e){}}
   const style = document.createElement('style');
   style.textContent = `
   #shamarupi-entry{position:static;display:inline-flex;align-items:center;justify-content:center;margin:8px 6px;border:0;border-radius:999px;padding:13px 18px;background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;font-weight:900;font-size:15px;box-shadow:0 5px 18px #0005;vertical-align:middle;cursor:pointer}
@@ -62,6 +64,15 @@
   @media(max-width:560px){#shamarupi-modal .sw-items{grid-template-columns:1fr}#shamarupi-modal .sw-item-art{width:76px;height:76px;flex-basis:76px}}
 
   @media(min-width:700px){#shamarupi-modal .sw-controls{max-width:500px;margin:10px auto}}
+  #shamarupi-modal .sw-gacha{border:1px solid #fbbf2466;background:linear-gradient(135deg,#7c2d12aa,#581c87aa);border-radius:16px;padding:14px;margin:14px 0;text-align:center}
+  #shamarupi-modal .sw-gacha button{background:linear-gradient(135deg,#f59e0b,#ea580c);font-size:16px;min-width:190px}
+  #shamarupi-modal .sw-gacha-result{min-height:25px;margin:10px 0 0;font-weight:900;color:#fde68a}
+  #shamarupi-modal .sw-skill-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;margin-top:10px}
+  #shamarupi-modal .sw-skill-card{background:#ffffff12;border:1px solid #ffffff25;border-radius:10px;padding:9px;font-size:12px}
+  #shamarupi-modal .sw-skill-card b{display:block;font-size:14px}
+  #shamarupi-modal .sw-skill-btn{background:linear-gradient(135deg,#0e7490,#1d4ed8)!important;min-width:0!important;flex:1;min-height:58px;font-size:13px!important;padding:8px!important}
+  #shamarupi-modal .sw-skill-btn:disabled{opacity:.55}
+  @media(max-width:480px){#shamarupi-modal .sw-skill-list{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
   const entry=document.createElement('button');entry.id='shamarupi-entry';entry.type='button';entry.textContent='⚔ 対戦モード';
@@ -90,6 +101,18 @@
         <button id="sw-equip-beam" class="secondary">白濁ビームを装備</button>
       </div>
       <p class="sw-small">プレイヤーHPは150。武器強化で攻撃力・当たり判定が少しずつ上昇します。</p>
+      <div class="sw-gacha">
+        <b>🎰 スキルガチャ</b>
+        <p class="sw-small">1回 3,000コイン ／ 重複するとスキルLvアップ（最大Lv.5）</p>
+        <button id="sw-gacha-pull" type="button">ガチャを1回引く（3,000）</button>
+        <div id="sw-gacha-result" class="sw-gacha-result" aria-live="polite">スキルを集めて対戦を有利にしよう！</div>
+        <div class="sw-skill-list">
+          <div class="sw-skill-card"><b>🛡️ コンドム Lv.<span id="sw-condom-level">0</span>/5</b><span>発動中は攻撃を防ぐ。初期持続1秒。</span></div>
+          <div class="sw-skill-card"><b>⏳ 賢者タイム Lv.<span id="sw-sage-level">0</span>/5</b><span>相手の動きを遅くする。初期持続2秒。</span></div>
+        </div>
+        <p class="sw-small">Lv.5のスキルが重複した場合は金の玉1個に変換されます。</p>
+        <p class="sw-small">所持金の玉：<b id="sw-gold-balls">0</b></p>
+      </div>
       <div class="sw-actions"><button id="sw-match">ランダムオンライン対戦</button></div>
       <div style="margin-top:18px;border-top:1px solid #ffffff24;padding-top:14px">
         <b>友達と合言葉で対戦</b>
@@ -113,6 +136,10 @@
       <div class="sw-controls">
         <div id="sw-stick-base" class="sw-joystick" role="application" aria-label="移動スティック"><div id="sw-stick-knob" class="sw-joystick-knob"></div></div>
         <button id="sw-fire" type="button">発射！</button>
+      </div>
+      <div class="sw-actions" style="margin-top:8px">
+        <button id="sw-use-condom" class="sw-skill-btn" type="button">🛡️ コンドム</button>
+        <button id="sw-use-sage" class="sw-skill-btn" type="button">⏳ 賢者タイム</button>
       </div>
       <p class="sw-small">スマホ：左スティックで上下左右に移動、発射ボタンを長押し。PC：A/D・←/→で左右、W/S・↑/↓で上下、Spaceで攻撃。</p>
       <div class="sw-actions"><button id="sw-friend-copy-wait" class="secondary" disabled>合言葉をコピー</button></div>
@@ -148,12 +175,49 @@
     $('sw-beam-upgrade').disabled=state.beamUnlocked&&state.beamLevel>=5;
     $('sw-equip-beam').disabled=!state.beamUnlocked;
     $('sw-equip-orb').disabled=state.weapon==='orb';$('sw-equip-beam').disabled=!state.beamUnlocked||state.weapon==='beam';
+    $('sw-gacha-pull').disabled=coinBalance()<3000;
+    $('sw-gacha-pull').textContent=coinBalance()<3000?'コイン不足（3,000必要）':'ガチャを1回引く（3,000）';
+    $('sw-condom-level').textContent=state.skills.condom;
+    $('sw-sage-level').textContent=state.skills.sage;
+    $('sw-gold-balls').textContent=state.goldBalls.toLocaleString('ja-JP');
   }
+  const gachaPool=[{key:'condom',name:'コンドム'},{key:'sage',name:'賢者タイム'}];
+  function pullGacha(){
+    if(coinBalance()<3000){$('sw-gacha-result').textContent='コインが足りません。3,000コイン必要です。';return;}
+    chargeBattleCoins(3000,'スキルガチャ',()=>{
+      const item=gachaPool[Math.floor(Math.random()*gachaPool.length)];
+      const old=state.skills[item.key];
+      if(old<5){state.skills[item.key]=old+1;persist();$('sw-gacha-result').textContent='✨ '+item.name+' を獲得！ Lv.'+old+' → Lv.'+(old+1);}
+      else{state.goldBalls++;persist();$('sw-gacha-result').textContent='🎉 '+item.name+' は最大Lv.5！重複分を金の玉1個に変換しました。';}
+      refreshShop();
+    });
+  }
+  $('sw-gacha-pull').addEventListener('click',pullGacha);
   function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
   function open(){modal.style.display='block';showHome();}
   function close(){stopGame();modal.style.display='none';}
   entry.onclick=open;$('sw-close').onclick=close;
   function status(t){$('sw-status').textContent=t;}
+  function skillDuration(key){const lv=state.skills[key];return key==='condom'?1+(lv-1)*0.25:2+(lv-1)*0.5;}
+  function skillCooldown(key){return Math.max(6,10-(state.skills[key]-1)*1)*1000;}
+  function refreshSkillButtons(){
+    const now=Date.now();
+    for(const key of ['condom','sage']){
+      const button=$('sw-use-'+key),level=state.skills[key],remaining=Math.max(0,state.cooldowns[key]-now);
+      button.disabled=level<1||remaining>0||!['playing','cpu'].includes(state.mode);
+      button.textContent=(key==='condom'?'🛡️ コンドム':'⏳ 賢者タイム')+(level<1?'（未所持）':remaining>0?'（'+(remaining/1000).toFixed(1)+'秒）':' 発動');
+    }
+  }
+  function activateSkill(key){
+    if(state.skills[key]<1||state.cooldowns[key]>Date.now()||!['playing','cpu'].includes(state.mode))return;
+    const duration=skillDuration(key);state.cooldowns[key]=Date.now()+skillCooldown(key);
+    if(key==='condom'){state.shieldUntil=Date.now()+duration*1000;status('コンドム発動！ '+duration.toFixed(1)+'秒間バリア！');}
+    else{state.enemySlowUntil=Date.now()+duration*1000;status('賢者タイム発動！ 相手を'+duration.toFixed(1)+'秒間スロー！');}
+    if(state.mode==='playing'&&state.room)state.room.send({type:'broadcast',event:'skill',payload:{uid:state.user.id,key,duration}});
+    refreshSkillButtons();
+  }
+  $('sw-use-condom').addEventListener('click',()=>activateSkill('condom'));
+  $('sw-use-sage').addEventListener('click',()=>activateSkill('sage'));
   function setInput(key,on){state.keys[key]=on;}
   const stick=$('sw-stick-base'),knob=$('sw-stick-knob');
   function moveStick(e){
@@ -277,7 +341,8 @@
     state.room=state.client.channel('shamarupi-battle:'+roomId,{config:{broadcast:{self:false}}});
     state.room.on('broadcast',{event:'state'},({payload})=>{if(payload?.uid!==state.user.id){state.ex=clamp(payload.x,.04,.96);state.ey=clamp(payload.y,.08,.92);if(Number.isFinite(payload.hp))state.enemyHp=clamp(payload.hp,0,state.maxHp);}});
     state.room.on('broadcast',{event:'shot'},({payload})=>{if(payload?.uid!==state.user.id)state.enemyShots.push({x:clamp(payload.x,0,1),y:clamp(payload.y,0,1),vx:-state.direction*(payload.beam?.03:.025),life:100,beam:!!payload.beam,followEnemy:!!payload.beam,level:clamp(payload.level||0,0,5),damage:clamp(payload.damage||12,1,40)});});
-    state.room.on('broadcast',{event:'damage'},({payload})=>{if(payload?.uid===state.opponent){const damage=clamp(payload.damage||12,1,40);state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');if(state.hp<=0)finish(false);}});
+    state.room.on('broadcast',{event:'skill'},({payload})=>{if(payload?.uid!==state.opponent)return;if(payload.key==='sage')state.slowUntil=Date.now()+Math.max(0,Math.min(10,Number(payload.duration)||2))*1000;});
+    state.room.on('broadcast',{event:'damage'},({payload})=>{if(payload?.uid===state.opponent){if(Date.now()<state.shieldUntil){status('バリアで攻撃を防いだ！');return;}const damage=clamp(payload.damage||12,1,40);state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');if(state.hp<=0)finish(false);}});
     // Opponent damage is delivered through the dedicated damage broadcast.
     state.room.subscribe(s=>{if(s==='SUBSCRIBED'){state.mode='playing';$('sw-mode').textContent='オンライン対戦';status('対戦開始！');beginGame()}});
   }
@@ -329,7 +394,7 @@
     const t=len?clamp(((px-x1)*dx+(py-y1)*dy)/len,0,1):0;
     const ex=x1+t*dx-px,ey=y1+t*dy-py;return ex*ex+ey*ey<=r*r;
   }
-  function beginGame(){if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;state.started=Date.now();state.lastShot=0;state.lastSync=0;state.cpuLastShot=Date.now();state.shots=[];state.enemyShots=[];updateHud();state.raf=requestAnimationFrame(tick)}
+  function beginGame(){if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;state.started=Date.now();state.lastShot=0;state.lastSync=0;state.cpuLastShot=Date.now();state.shots=[];state.enemyShots=[];state.shieldUntil=0;state.slowUntil=0;state.enemySlowUntil=0;state.cooldowns={condom:0,sage:0};updateHud();refreshSkillButtons();state.raf=requestAnimationFrame(tick)}
   function shoot(){
     const now=Date.now(),beam=state.weapon==='beam',level=beam?state.beamLevel:state.orbLevel,delay=beam?720:420;if(now-state.lastShot<delay)return;state.lastShot=now;
     const damage=beam?6+level:12+level*2;
@@ -365,13 +430,14 @@
     }catch(e){console.warn('rating update:',e);$('sw-rating-result').textContent='レート更新に失敗しました。再ログイン後に確認してください。';}
   }
   function cleanupChannels(){if(state.client&&state.room){state.client.removeChannel(state.room);state.room=null}if(state.client&&state.lobby){state.client.removeChannel(state.lobby);state.lobby=null}if(state.client&&state.friendChannel){state.client.removeChannel(state.friendChannel);state.friendChannel=null}}
-  function stopGame(){state.matchToken=(state.matchToken||0)+1;if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;if(state.searchPoll)clearInterval(state.searchPoll);state.searchPoll=null;state.mode='idle';state.keys={};resetStick();setInput('fire',false);cleanupChannels()}
+  function stopGame(){state.matchToken=(state.matchToken||0)+1;if(state.raf)cancelAnimationFrame(state.raf);state.raf=0;if(state.searchPoll)clearInterval(state.searchPoll);state.searchPoll=null;state.mode='idle';state.keys={};state.shieldUntil=0;state.slowUntil=0;state.enemySlowUntil=0;resetStick();setInput('fire',false);cleanupChannels()}
   function tick(){
     if(state.mode!=='playing'&&state.mode!=='cpu')return;
-    if(state.keys.left)state.x-=.008;if(state.keys.right)state.x+=.008;if(state.keys.up)state.y-=.008;if(state.keys.down)state.y+=.008;
+    const playerSpeed=Date.now()<state.slowUntil?.004:.008;
+    if(state.keys.left)state.x-=playerSpeed;if(state.keys.right)state.x+=playerSpeed;if(state.keys.up)state.y-=playerSpeed;if(state.keys.down)state.y+=playerSpeed;
     state.x=clamp(state.x,.04,.96);state.y=clamp(state.y,.08,.92);
     if(state.keys.fire)shoot();
-    if(state.mode==='cpu'&&Date.now()-state.cpuLastShot>900){
+    if(state.mode==='cpu'&&Date.now()-state.cpuLastShot>(Date.now()<state.enemySlowUntil?1800:900)){
       state.cpuLastShot=Date.now();
       const dx=state.x-state.ex,dy=state.y-state.ey,len=Math.hypot(dx,dy)||1,speed=.024;
       state.enemyShots.push({x:state.ex,y:state.ey,vx:dx/len*speed,vy:dy/len*speed,life:100,damage:18,targeted:true});
@@ -395,6 +461,7 @@
       if(enemyHit&&s.life>0){
         state.enemyShots.splice(i,1);
         if(state.mode==='cpu'){
+          if(Date.now()<state.shieldUntil){status('バリアで攻撃を防いだ！');continue;}
           const damage=clamp(s.damage||18,1,40);state.hp=Math.max(0,state.hp-damage);updateHud();status('被弾！ −'+damage+' HP');
           if(state.hp<=0){finish(false);return}
         }
@@ -406,7 +473,7 @@
     if(state.hp<=0){finish(false);return}
     const now=Date.now();if(state.mode==='playing'&&state.room&&now-state.lastSync>90){state.lastSync=now;state.room.send({type:'broadcast',event:'state',payload:{uid:state.user.id,x:state.x,y:state.y,hp:state.hp}})}
     if(state.mode==='playing'&&state.enemyHp<=0){finish(true);return}
-    draw();updateHud();state.raf=requestAnimationFrame(tick)
+    draw();updateHud();refreshSkillButtons();state.raf=requestAnimationFrame(tick)
   }
   const fighterImage=(()=>{
     const domImage=document.getElementById('playerImg');
