@@ -65,7 +65,7 @@
   @media(max-width:560px){#shamarupi-modal .sw-items{grid-template-columns:1fr}#shamarupi-modal .sw-item-art{width:76px;height:76px;flex-basis:76px}}
 
   @media(min-width:700px){#shamarupi-modal .sw-controls{max-width:500px;margin:10px auto}}
-  #shamarupi-modal .sw-gacha{border:1px solid #fbbf2466;background:linear-gradient(135deg,#7c2d12aa,#581c87aa);border-radius:16px;padding:14px;margin:14px 0;text-align:center}
+  #shamarupi-modal .sw-gacha-lever{display:flex;align-items:center;justify-content:center;gap:10px;margin:14px auto 8px;max-width:290px;padding:14px 12px;border-radius:18px;background:linear-gradient(180deg,#1e293b,#0f172a);border:2px solid #fbbf24;box-shadow:inset 0 2px 10px #0008,0 5px 16px #0005;touch-action:none;user-select:none}\n  #shamarupi-modal .sw-gacha-orb{font-size:38px;line-height:1;color:#fbbf24;text-shadow:0 2px 8px #f59e0b88}\n  #shamarupi-modal .sw-gacha-handle{width:78px;height:68px;border:2px solid #fde68a;border-radius:14px;background:linear-gradient(180deg,#fef3c7,#f59e0b)!important;color:#7c2d12!important;font-size:40px!important;font-weight:1000;line-height:1;box-shadow:0 5px 0 #92400e,0 8px 12px #0007;touch-action:none;transition:transform .12s ease,box-shadow .12s ease}\n  #shamarupi-modal .sw-gacha-handle.pulling{transform:translateY(34px);box-shadow:0 1px 0 #92400e,0 3px 8px #0007}\n  #shamarupi-modal .sw-gacha-lever.spinning .sw-gacha-orb{animation:swGachaSpin .55s ease-in-out 3}\n  #shamarupi-modal .sw-gacha-lever.spinning .sw-gacha-handle{animation:swGachaKick .55s ease-in-out 3}\n  @keyframes swGachaSpin{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(1.2);filter:brightness(1.7)}100%{transform:rotate(360deg) scale(1)}}\n  @keyframes swGachaKick{0%,100%{transform:translateY(0)}35%,65%{transform:translateY(22px)}}\n  #shamarupi-modal .sw-gacha{border:1px solid #fbbf2466;background:linear-gradient(135deg,#7c2d12aa,#581c87aa);border-radius:16px;padding:14px;margin:14px 0;text-align:center}
   #shamarupi-modal .sw-gacha button{background:linear-gradient(135deg,#f59e0b,#ea580c);font-size:16px;min-width:190px}
   #shamarupi-modal .sw-gacha-result{min-height:25px;margin:10px 0 0;font-weight:900;color:#fde68a}
   #shamarupi-modal .sw-skill-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;margin-top:10px}
@@ -106,7 +106,7 @@
       <div class="sw-gacha">
         <b>🎰 スキルガチャ</b>
         <p class="sw-small">1回 3,000コイン ／ 重複するとスキルLvアップ（最大Lv.5）</p>
-        <button id="sw-gacha-pull" type="button">ガチャを1回引く（3,000）</button>
+        <div class="sw-gacha-lever" id="sw-gacha-lever" aria-label="レバーを下に引いてガチャを回す"><span class="sw-gacha-orb">◯</span><button id="sw-gacha-handle" class="sw-gacha-handle" type="button" aria-label="レバーを引く">U</button><span class="sw-gacha-orb">◯</span></div>\n        <button id="sw-gacha-pull" type="button">ガチャを1回引く（3,000）</button>
         <div id="sw-gacha-result" class="sw-gacha-result" aria-live="polite">スキルを集めて対戦を有利にしよう！</div>
         <div class="sw-skill-list">
           <div class="sw-skill-card"><b>🛡️ コンドム Lv.<span id="sw-condom-level">0</span>/5</b><span>発動中は攻撃を防ぐ。初期持続1秒。</span></div>
@@ -153,10 +153,18 @@
   </div>`;
   document.body.append(modal);
   function placeBattleEntry(){
-    if(entry.isConnected)return true;
+    if(entry.isConnected&&gachaEntry.isConnected)return true;
     const candidates=[...document.querySelectorAll('button,[role="button"],input[type="button"],input[type="submit"]')];
-    const start=candidates.find(el=>/ゲームスタート|ゲーム開始|スタート/.test((el.innerText||el.value||'').replace(/\\s/g,'')));
-    if(start){start.insertAdjacentElement('afterend',entry);entry.insertAdjacentElement('afterend',gachaEntry);return true;}
+    let start=candidates.find(el=>/ゲームスタート|ゲーム開始|スタート/.test((el.innerText||el.value||'').replace(/\\s/g,'')));
+    if(!start){
+      const all=[...document.querySelectorAll('body *')].filter(el=>el.children.length===0&&/GAME\\s*START|ゲームスタート|ゲーム開始/.test((el.textContent||'').trim()));
+      start=all[0]?.parentElement||all[0]||null;
+    }
+    if(start){
+      if(!entry.isConnected)start.insertAdjacentElement('afterend',entry);
+      if(!gachaEntry.isConnected)entry.insertAdjacentElement('afterend',gachaEntry);
+      return true;
+    }
     return false;
   }
   if(!placeBattleEntry()){
@@ -197,7 +205,7 @@
       refreshShop();
     });
   }
-  $('sw-gacha-pull').addEventListener('click',pullGacha);
+  $('sw-gacha-pull').addEventListener('click',pullGacha);\n  const gachaLever=$('sw-gacha-lever'),gachaHandle=$('sw-gacha-handle');\n  let leverPointer=null,leverTriggered=false;\n  function animateGachaPull(){if(leverTriggered)return;leverTriggered=true;gachaHandle.classList.add('pulling');gachaLever.classList.add('spinning');setTimeout(()=>{gachaHandle.classList.remove('pulling');pullGacha();setTimeout(()=>{gachaLever.classList.remove('spinning');leverTriggered=false;},1250);},240);}\n  gachaHandle.addEventListener('pointerdown',e=>{if($('sw-gacha-pull').disabled)return;e.preventDefault();leverPointer=e.pointerId;gachaHandle.setPointerCapture(e.pointerId);gachaHandle.classList.add('pulling');});\n  gachaHandle.addEventListener('pointerup',e=>{if(leverPointer!==e.pointerId)return;leverPointer=null;animateGachaPull();});\n  gachaHandle.addEventListener('pointercancel',()=>{leverPointer=null;gachaHandle.classList.remove('pulling');});\n  gachaHandle.addEventListener('click',e=>{e.preventDefault();animateGachaPull();});
   function showHome(){ $('sw-home').hidden=false;$('sw-game').hidden=true;$('sw-result').hidden=true;$('sw-wins').textContent=state.wins;$('sw-rating').textContent=state.rating;$('sw-equipped').textContent=state.weapon==='beam'?'白濁ビーム':'白濁ボール';refreshShop();}
   function open(){modal.style.display='block';showHome();}
   function openGacha(){open();requestAnimationFrame(()=>{const section=modal.querySelector('.sw-gacha');if(section)section.scrollIntoView({behavior:'smooth',block:'center'});});}
