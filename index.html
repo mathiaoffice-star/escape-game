@@ -111,10 +111,18 @@ html=html.replace(/ESCAPE GAME/g,'シャマルピー戦争');
 const visibleMenu = `<nav id="shamarupi-visible-menu" aria-label="追加ゲームメニュー" style="position:fixed!important;z-index:2147483647!important;left:18px!important;right:18px!important;bottom:max(12px,env(safe-area-inset-bottom))!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px!important;padding:10px!important;background:rgba(245,245,245,.97)!important;border:1px solid #dedede!important;border-radius:22px!important;box-shadow:0 4px 16px #0002!important"><button type="button" data-shamarupi-target="shamarupi-entry" style="min-width:0;border:0;border-radius:16px;padding:13px 4px;background:#fff;color:#171717;font-weight:900;font-size:clamp(12px,3.4vw,15px);white-space:nowrap;box-shadow:0 1px 5px #0001">⚔ 対戦</button><button type="button" data-shamarupi-target="shamarupi-gacha-entry" style="min-width:0;border:0;border-radius:16px;padding:13px 4px;background:#fff;color:#171717;font-weight:900;font-size:clamp(12px,3.4vw,15px);white-space:nowrap;box-shadow:0 1px 5px #0001">🎰 ガチャ</button><button type="button" data-shamarupi-target="shamarupi-skill-entry" style="min-width:0;border:0;border-radius:16px;padding:13px 4px;background:#fff;color:#171717;font-weight:900;font-size:clamp(12px,3.4vw,15px);white-space:nowrap;box-shadow:0 1px 5px #0001">⚡ スキル</button></nav><script>(function(){document.addEventListener('click',function(e){var b=e.target.closest('[data-shamarupi-target]');if(!b)return;var t=document.getElementById(b.getAttribute('data-shamarupi-target'));if(t){t.click();}else{var n=document.getElementById('shamarupi-menu-error');if(!n){n=document.createElement('div');n.id='shamarupi-menu-error';n.style.cssText='position:fixed;z-index:2147483647;left:18px;right:18px;bottom:92px;padding:12px;background:#f3f3f3;color:#333;border:1px solid #ddd;border-radius:14px;font-weight:700';document.body.appendChild(n);}n.textContent='追加機能を読み込み中です。少し待ってからもう一度押してください。';}},true);})();<\/script></body>`;
 html=html.replace('</body>',visibleMenu);
 document.open();document.write(html);document.close();
+// 拡張スクリプトの初期化例外を画面上に表示して原因を隠さない。
+window.addEventListener('error',event=>{
+ if(!event.filename||!event.filename.includes('battle-mode.js'))return;
+ const box=document.createElement('div');
+ box.textContent='対戦・ガチャ機能の初期化エラー：'+(event.message||'不明なエラー');
+ box.style.cssText='position:fixed;z-index:2147483647;left:12px;right:12px;bottom:150px;padding:12px;background:#f3f3f3;color:#333;border:1px solid #ddd;border-radius:14px;font-size:12px';
+ document.body.appendChild(box);
+});
 const bootScripts=[
  './customize-voice-categories.js?v=37',
  './stripe-store.js?v=ios-audio2',
- './battle-mode.js?v=53',
+ './battle-mode.js?v=54',
  './normal-skills.js?v=4',
  './character-system.js?v=2',
  './voice-fix.js?v=high-quality-game-voices-5',
