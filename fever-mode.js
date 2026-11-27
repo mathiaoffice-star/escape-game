@@ -5,7 +5,7 @@
   }
   let feverUntil=0, feverActive=false, feverVoice=null, voiceReady=false;
   // センパイ選択時だけFEVER中のBGMを専用曲へ切り替える。
-  const senpaiFeverBgm=new Audio('./audio/senpai-bgm.ogg');
+  const senpaiFeverBgm=new Audio('./audio/myinstants.mp3');
   senpaiFeverBgm.preload='auto';senpaiFeverBgm.loop=true;senpaiFeverBgm.playsInline=true;
   let senpaiBgmActive=false;
   function isSenpaiSelected(){try{const s=JSON.parse(localStorage.getItem('shamarupiWarV1')||'{}');return s.selectedCharacter==='senpai'&&(s.characters||[]).includes('senpai');}catch(e){return false;}}
