@@ -10,6 +10,18 @@
   const read=()=>{try{return JSON.parse(localStorage.getItem(STORE)||'{}')}catch(_){return {}}};
   const audio=new Audio(VOICE);
   audio.preload='auto';
+  // Block every other audio.play() invoked by the same attack input while Nnyaata is selected.
+  // This also catches detached new Audio() instances that cannot be found in the DOM.
+  if(!window.__nnyaataMediaPlayGuard){
+    const nativeMediaPlay=HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play=function(){
+      if(window.__nnyaataAttackInput && this!==window.__nnyaataVoiceAudio && this!==audio){
+        return Promise.resolve();
+      }
+      return nativeMediaPlay.apply(this,arguments);
+    };
+    window.__nnyaataMediaPlayGuard=true;
+  }
   let lastVoiceAt=0;
   function isSelected(){return read().selectedCharacter==='nnyaata' && (read().characters||[]).includes('nnyaata');}
   function playVoice(){
@@ -81,21 +93,21 @@
   }
   let clickMediaBefore=null, keyMediaBefore=null;
   document.addEventListener('click',e=>{
-    if(e.target?.closest?.('#attackBtn'))clickMediaBefore=capturePlayingMedia();
+    if(e.target?.closest?.('#attackBtn')){window.__nnyaataAttackInput=isSelected();clickMediaBefore=capturePlayingMedia();}
   },true);
   document.addEventListener('click',e=>{
     if(!e.target?.closest?.('#attackBtn'))return;
     silenceNewAttackMedia(clickMediaBefore||new Set());
-    clickMediaBefore=null;
+    clickMediaBefore=null;window.__nnyaataAttackInput=false;
   },false);
   document.addEventListener('keydown',e=>{
     const tag=(document.activeElement?.tagName||'').toLowerCase();
-    if((e.code==='Space'||e.key===' ')&&!e.repeat&&tag!=='input'&&tag!=='textarea'&&tag!=='button')keyMediaBefore=capturePlayingMedia();
+    if((e.code==='Space'||e.key===' ')&&!e.repeat&&tag!=='input'&&tag!=='textarea'&&tag!=='button'){window.__nnyaataAttackInput=isSelected();keyMediaBefore=capturePlayingMedia();}
   },true);
   document.addEventListener('keydown',e=>{
     if((e.code==='Space'||e.key===' ')&&!e.repeat){
       silenceNewAttackMedia(keyMediaBefore||new Set());
-      keyMediaBefore=null;
+      keyMediaBefore=null;window.__nnyaataAttackInput=false;
     }
   },false);
   window.addEventListener('shamarupi-character-change',e=>{
