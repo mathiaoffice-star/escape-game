@@ -581,7 +581,7 @@
   })();
   try{const characterSave=JSON.parse(localStorage.getItem(STORE)||'{}');if(characterSave.selectedCharacter==='nnyaata'&&(characterSave.characters||[]).includes('nnyaata')&&fighterImage)fighterImage.src='./characters/nnyaata.jpg';}catch(e){}
   const fighterOriginalSrc=fighterImage?.src||'';
-  window.addEventListener('shamarupi-character-change',e=>{if(!fighterImage)return;if(e.detail?.id==='nnyaata')fighterImage.src='./characters/nnyaata.jpg';else if(e.detail?.id==='default'&&fighterOriginalSrc)fighterImage.src=fighterOriginalSrc;});
+  window.addEventListener('shamarupi-character-change',e=>{if(!fighterImage)return;if(e.detail?.image)fighterImage.src=e.detail.image;else if(e.detail?.id==='nnyaata')fighterImage.src='./characters/nnyaata.jpg';else if(e.detail?.id==='default'&&window.__defaultCharacterImage)fighterImage.src=window.__defaultCharacterImage;else if(e.detail?.id==='default'&&fighterOriginalSrc)fighterImage.src=fighterOriginalSrc;});
   function draw(){
     const c=$('sw-arena'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
     ctx.fillStyle='#172554';ctx.fillRect(0,0,w,h);
